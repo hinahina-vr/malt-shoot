@@ -1,0 +1,60 @@
+{
+  "tests": 6,
+  "name": "AllTests",
+  "testsuites": [
+    {
+      "name": "BulletPatternTest",
+      "tests": 3,
+      "testsuite": [
+        {
+          "name": "CirclePatternAngles",
+          "file": "C:\\Users\\wdddi\\workspace\\malt-shoot\\tests\\test_bullet_manager.cpp",
+          "line": 9
+        },
+        {
+          "name": "CirclePatternVelocity",
+          "file": "C:\\Users\\wdddi\\workspace\\malt-shoot\\tests\\test_bullet_manager.cpp",
+          "line": 22
+        },
+        {
+          "name": "AimedBulletDirection",
+          "file": "C:\\Users\\wdddi\\workspace\\malt-shoot\\tests\\test_bullet_manager.cpp",
+          "line": 38
+        }
+      ]
+    },
+    {
+      "name": "MovementTest",
+      "tests": 1,
+      "testsuite": [
+        {
+          "name": "DiagonalNormalization",
+          "file": "C:\\Users\\wdddi\\workspace\\malt-shoot\\tests\\test_bullet_manager.cpp",
+          "line": 57
+        }
+      ]
+    },
+    {
+      "name": "BoundaryTest",
+      "tests": 1,
+      "testsuite": [
+        {
+          "name": "ScreenBoundary",
+          "file": "C:\\Users\\wdddi\\workspace\\malt-shoot\\tests\\test_bullet_manager.cpp",
+          "line": 73
+        }
+      ]
+    },
+    {
+      "name": "CollisionTest",
+      "tests": 1,
+      "testsuite": [
+        {
+          "name": "CircleCircleCollision",
+          "file": "C:\\Users\\wdddi\\workspace\\malt-shoot\\tests\\test_bullet_manager.cpp",
+          "line": 95
+        }
+      ]
+    }
+  ]
+}

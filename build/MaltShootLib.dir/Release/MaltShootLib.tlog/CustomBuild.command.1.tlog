@@ -1,0 +1,10 @@
+^C:\USERS\WDDDI\WORKSPACE\MALT-SHOOT\CMAKELISTS.TXT
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SC:/Users/wdddi/workspace/malt-shoot -BC:/Users/wdddi/workspace/malt-shoot/build --check-stamp-file C:/Users/wdddi/workspace/malt-shoot/build/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd

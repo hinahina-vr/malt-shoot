@@ -1,0 +1,5 @@
+if(EXISTS "C:/Users/wdddi/workspace/malt-shoot/build/MaltShootTests[1]_tests.cmake")
+  include("C:/Users/wdddi/workspace/malt-shoot/build/MaltShootTests[1]_tests.cmake")
+else()
+  add_test(MaltShootTests_NOT_BUILT MaltShootTests_NOT_BUILT)
+endif()

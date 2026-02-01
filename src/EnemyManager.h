@@ -29,6 +29,7 @@ public:
     int GetCurrentWave() const { return m_currentWave; }
     bool IsBossWave() const { return (m_currentWave % 4) == 3; }
     bool AllEnemiesDead() const;
+    bool HasActiveEnemies() const;  // 雑魚敵がいるかチェック
     void ResetWaves() { m_currentWave = 0; m_waveTimer = 0.0f; m_bossWaveJustStarted = false; }
     bool DidBossWaveJustStart() const { return m_bossWaveJustStarted; }
     void ClearBossWaveStartFlag() { m_bossWaveJustStarted = false; }

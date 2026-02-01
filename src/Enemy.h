@@ -63,12 +63,13 @@ public:
     // スペルカード名（ウイスキーテーマ）
     const wchar_t* GetSpellCardName() const {
         static const wchar_t* names[] = {
-            L"琥珀符「アンバー・メモリー」",
-            L"熟成符「12年の夢」",
-            L"樽霊符「バレル・ダンス」",
-            L"終宴符「ラスト・ドロップ」"
+            L"シングル「オーダーズ・オン・ザ・ロック」",
+            L"ダブル「トワイライト・バレル」",
+            L"スリーショット「スモーキー・アイラ」",
+            L"フォーシーズン「シェリー・キャスク」",
+            L"禁断「マスターズ・リザーブ」"
         };
-        if (m_currentSpell >= 0 && m_currentSpell < 4) {
+        if (m_currentSpell >= 0 && m_currentSpell < 5) {
             return names[m_currentSpell];
         }
         return L"";
@@ -99,7 +100,7 @@ private:
     ComPtr<ID3D11ShaderResourceView> m_texture;
     
     // ボススペルカード
-    int m_spellCards = 4;   // 復活回数（4つのスペル）
+    int m_spellCards = 5;   // 復活回数（5つのスペル）
     int m_currentSpell = 0; // 現在のスペル番号
     float m_invincibleTimer = 0.0f;  // 無敵時間
     bool m_showingCutin = false;     // カットイン表示中

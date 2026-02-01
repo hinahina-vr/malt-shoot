@@ -194,19 +194,24 @@ void Game::Update() {
         m_enemyManager->ClearBossWaveStartFlag();
     }
     
-    // ボス登場前3秒ディレイ処理
+    // ボス登場前：雑魚が全滅してから3秒ディレイ処理
     if (m_waitingForBoss) {
-        m_bossSpawnDelay += m_deltaTime;
-        if (m_bossSpawnDelay >= 3.0f) {
-            m_waitingForBoss = false;
-            m_bossMode = true;
-            m_bgm->Stop();
-            m_bgm->PlayBossBGM();
-            
-            // ボスをスポーン！
-            m_enemyManager->SpawnEnemy(320.0f, 150.0f, 500.0f, 3, EnemyType::Boss);
-            
-            StartBossDialogue();
+        // 雑魚敵がまだいる場合は待機
+        if (m_enemyManager->HasActiveEnemies()) {
+            m_bossSpawnDelay = 0.0f;  // 雑魚がいる間はタイマーリセット
+        } else {
+            m_bossSpawnDelay += m_deltaTime;
+            if (m_bossSpawnDelay >= 2.0f) {  // 雑魚全滅から2秒後
+                m_waitingForBoss = false;
+                m_bossMode = true;
+                m_bgm->Stop();
+                m_bgm->PlayBossBGM();
+                
+                // ボスをスポーン！
+                m_enemyManager->SpawnEnemy(320.0f, 150.0f, 500.0f, 3, EnemyType::Boss);
+                
+                StartBossDialogue();
+            }
         }
     }
     
@@ -455,7 +460,7 @@ void Game::Render() {
         m_text->DrawTextWithValue(L"残機", m_lives, textX, 170);
         m_text->DrawTextWithValue(L"ボム", m_bombs, textX, 210);
         m_text->DrawTextWithValue(L"パワー", m_power, textX, 250);
-        m_text->DrawTextWithValue(L"グレイズ", m_graze, textX, 330);
+        m_text->DrawTextWithValue(L"バレル", m_graze, textX, 290);
         
         // FPS display
         wchar_t fpsBuffer[32];
@@ -1330,7 +1335,7 @@ void Game::UpdateCutin() {
             int spellIndex = enemy->GetCurrentSpell();
             if (spellIndex >= 0 && spellIndex < 5) {
                 m_currentCutinIndex = spellIndex;
-                m_cutinTimer = 2.0f;  // 2秒間表示
+                m_cutinTimer = 0.5f;  // 0.5秒間表示
                 enemy->ClearCutin();  // フラグをクリア
                 
                 // スペルカード切り替え時に敵弾消し
@@ -1358,23 +1363,23 @@ void Game::RenderCutin() {
     if (m_currentCutinIndex < 0 || m_currentCutinIndex >= 5) return;
     if (!m_cutinTextures[m_currentCutinIndex]) return;
     
-    // タイマー進行（0→2.0秒）
-    float t = 2.0f - m_cutinTimer;  // 0→2.0に変換
+    // タイマー進行（0→0.5秒）
+    float t = 0.5f - m_cutinTimer;  // 0→0.5に変換
     
-    // フェードイン・アウト計算
-    float alpha = 1.0f;
-    if (t < 0.2f) {
-        alpha = t / 0.2f;  // フェードイン
-    } else if (t > 1.8f) {
-        alpha = (2.0f - t) / 0.2f;  // フェードアウト
+    // フェードイン・アウト計算（透明度80%）
+    float alpha = 0.8f;
+    if (t < 0.1f) {
+        alpha = (t / 0.1f) * 0.8f;  // フェードイン
+    } else if (t > 0.4f) {
+        alpha = ((0.5f - t) / 0.1f) * 0.8f;  // フェードアウト
     }
     
     // 拡大アニメーション（登場時に大きくなる）
     float scale = 1.0f;
-    if (t < 0.3f) {
-        // イーズアウト：1.5→1.0に縮小
-        float p = t / 0.3f;
-        scale = 1.5f - 0.5f * (p * p);  // 二次イージング
+    if (t < 0.15f) {
+        // イーズアウト：1.3→1.0に縮小
+        float p = t / 0.15f;
+        scale = 1.3f - 0.3f * (p * p);  // 二次イージング
     }
     
     // 画面全体に大きく表示
@@ -1386,8 +1391,8 @@ void Game::RenderCutin() {
     float y = (PLAY_AREA_HEIGHT - cutinHeight) / 2.0f;
     
     // フラッシュ効果（登場時に白フラッシュ）
-    if (t < 0.15f) {
-        float flashAlpha = 1.0f - (t / 0.15f);
+    if (t < 0.08f) {
+        float flashAlpha = 1.0f - (t / 0.08f);
         m_graphics->DrawSprite(0, 0, static_cast<float>(PLAY_AREA_WIDTH), static_cast<float>(PLAY_AREA_HEIGHT),
             DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, flashAlpha * 0.8f));
     }
@@ -1397,16 +1402,16 @@ void Game::RenderCutin() {
         m_cutinTextures[m_currentCutinIndex].Get(),
         DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, alpha));
     
-    // キラキラ効果（ランダムな光）
-    if (t > 0.2f && t < 1.8f) {
-        for (int i = 0; i < 3; i++) {
-            float sparkleT = fmodf(t * 5.0f + i * 0.7f, 1.0f);
+    // キラキラ効果（短時間なので簡略化）
+    if (t > 0.1f && t < 0.4f) {
+        for (int i = 0; i < 2; i++) {
+            float sparkleT = fmodf(t * 10.0f + i * 0.5f, 1.0f);
             float sparkleAlpha = sinf(sparkleT * 3.14159f);
-            float sparkleX = fmodf((t * 200.0f + i * 150.0f), static_cast<float>(PLAY_AREA_WIDTH));
-            float sparkleY = fmodf((t * 180.0f + i * 220.0f), static_cast<float>(PLAY_AREA_HEIGHT));
+            float sparkleX = fmodf((t * 400.0f + i * 150.0f), static_cast<float>(PLAY_AREA_WIDTH));
+            float sparkleY = fmodf((t * 350.0f + i * 220.0f), static_cast<float>(PLAY_AREA_HEIGHT));
             
             m_graphics->DrawGlowCircle(sparkleX, sparkleY, 15.0f + sparkleT * 10.0f,
-                DirectX::XMFLOAT4(1.0f, 1.0f, 0.8f, sparkleAlpha * 0.6f), 3);
+                DirectX::XMFLOAT4(1.0f, 1.0f, 0.8f, sparkleAlpha * 0.5f), 3);
         }
     }
 }

@@ -177,6 +177,16 @@ bool EnemyManager::AllEnemiesDead() const {
     return !m_enemies.empty();
 }
 
+// 雑魚敵がいるかチェック（ボス以外のアクティブな敵）
+bool EnemyManager::HasActiveEnemies() const {
+    for (const auto& enemy : m_enemies) {
+        if (enemy->IsActive() && !enemy->IsBoss()) {
+            return true;
+        }
+    }
+    return false;
+}
+
 void EnemyManager::DamageBoss(float damage) {
     for (auto& enemy : m_enemies) {
         if (enemy->IsActive() && enemy->GetType() == EnemyType::Boss) {

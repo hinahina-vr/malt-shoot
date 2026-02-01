@@ -89,6 +89,11 @@ void Enemy::Update(float deltaTime, int screenWidth, int screenHeight, BulletMan
                 if (m_displayHealth < m_health) m_displayHealth = m_health;
             }
             
+            // 被弾フラッシュタイマー更新
+            if (m_flashTimer > 0.0f) {
+                m_flashTimer -= deltaTime;
+            }
+            
             // 雑魚敵タイムアウト（ボス以外、8秒で退場開始）
             if (m_type != EnemyType::Boss && m_lifetime > m_maxLifetime) {
                 m_state = EnemyState::Leaving;
@@ -97,21 +102,79 @@ void Enemy::Update(float deltaTime, int screenWidth, int screenHeight, BulletMan
             // ボスはHP%に応じてパターン自動切り替え（スペルカード風）
             if (m_type == EnemyType::Boss) {
                 float hpPercent = m_health / m_maxHealth;
-                if (hpPercent > 0.75f) m_patternId = 0;       // Phase 1: Flower
-                else if (hpPercent > 0.50f) m_patternId = 4;  // Phase 2: Rainbow Spiral
-                else if (hpPercent > 0.25f) m_patternId = 2;  // Phase 3: Wave + Aimed
-                else m_patternId = 3;                          // Phase 4: Double Ring
+                int prevPattern = m_patternId;
+                if (hpPercent > 0.75f) m_patternId = 0;       // Phase 1: 琥珀符
+                else if (hpPercent > 0.50f) m_patternId = 4;  // Phase 2: 熟成符
+                else if (hpPercent > 0.25f) m_patternId = 2;  // Phase 3: 樽霊符
+                else m_patternId = 3;                          // Phase 4: 終宴符
                 
-                // 東方風ボス移動（ゆっくり左右に動く＋上下にふわふわ）
-                float moveSpeed = 80.0f;
-                float horizontalRange = 150.0f;
-                float verticalRange = 30.0f;
-                m_position.x = m_targetPosition.x + sinf(m_patternTimer * 0.5f) * horizontalRange;
-                m_position.y = m_targetPosition.y + sinf(m_patternTimer * 0.8f) * verticalRange;
+                // スペルカード毎にテーマを決めて動きを付ける
+                float t = m_patternTimer;
+                float centerX = m_targetPosition.x;
+                float centerY = m_targetPosition.y;
+                
+                // ターゲット位置を計算（直接設定ではなく目標位置を算出）
+                float targetX = centerX;
+                float targetY = centerY;
+                
+                switch (m_patternId) {
+                    case 0: {
+                        // 琥珀符「アンバー・メモリー」: 優雅にゆったり左右
+                        float slowWave = sinf(t * 0.3f);
+                        targetX = centerX + slowWave * 100.0f;
+                        targetY = centerY + sinf(t * 0.5f) * 20.0f;
+                        break;
+                    }
+                    case 4: {
+                        // 熟成符「12年の夢」: 8の字を描く動き
+                        targetX = centerX + sinf(t * 0.6f) * 120.0f;
+                        targetY = centerY + sinf(t * 1.2f) * 40.0f;
+                        break;
+                    }
+                    case 2: {
+                        // 樽霊符「バレル・ダンス」: 急停止→ダッシュ→急停止
+                        float phase = fmodf(t, 4.0f);  // 4秒サイクル
+                        if (phase < 1.5f) {
+                            // 停止（じわじわ揺れ）
+                            targetX = centerX + sinf(t * 3.0f) * 10.0f;
+                            targetY = centerY;
+                        } else if (phase < 2.5f) {
+                            // ダッシュ！（右へ）
+                            float dashProgress = (phase - 1.5f);
+                            targetX = centerX + dashProgress * 200.0f;
+                            targetY = centerY;
+                        } else {
+                            // ダッシュ！（戻る）
+                            float returnProgress = (phase - 2.5f) / 1.5f;
+                            targetX = centerX + 200.0f - returnProgress * 200.0f;
+                            targetY = centerY;
+                        }
+                        break;
+                    }
+                    case 3: {
+                        // 終宴符「ラスト・ドロップ」: 激しく不規則に動く
+                        float chaos = sinf(t * 2.0f) * cosf(t * 1.7f);
+                        targetX = centerX + chaos * 150.0f;
+                        targetY = centerY + sinf(t * 2.5f) * 50.0f + cosf(t * 1.3f) * 30.0f;
+                        break;
+                    }
+                    default: {
+                        targetX = centerX + sinf(t * 0.5f) * 100.0f;
+                        targetY = centerY + sinf(t * 0.8f) * 30.0f;
+                        break;
+                    }
+                }
                 
                 // 画面内に収める
-                if (m_position.x < m_radius) m_position.x = m_radius;
-                if (m_position.x > screenWidth - m_radius) m_position.x = screenWidth - m_radius;
+                if (targetX < m_radius + 50) targetX = m_radius + 50;
+                if (targetX > screenWidth - m_radius - 50) targetX = screenWidth - m_radius - 50;
+                if (targetY < m_radius) targetY = m_radius;
+                if (targetY > 300.0f) targetY = 300.0f;
+                
+                // lerp補間でスムーズに移動（フレーム飛び防止）
+                float lerpSpeed = 8.0f * deltaTime;  // スムーズ補間
+                m_position.x += (targetX - m_position.x) * lerpSpeed;
+                m_position.y += (targetY - m_position.y) * lerpSpeed;
             }
             
             ExecuteBulletPattern(bulletManager, playerPos);
@@ -121,6 +184,21 @@ void Enemy::Update(float deltaTime, int screenWidth, int screenHeight, BulletMan
         case EnemyState::Leaving: {
             m_position.y -= m_speed * deltaTime;
             if (m_position.y < -100.0f) {
+                m_state = EnemyState::Dead;
+            }
+            break;
+        }
+        
+        case EnemyState::Dying: {
+            // 死亡アニメーション進行
+            m_deathTimer += deltaTime;
+            
+            // 派手に振動
+            m_position.x += (sinf(m_deathTimer * 50.0f) * 5.0f);
+            m_position.y += (cosf(m_deathTimer * 40.0f) * 3.0f);
+            
+            // アニメーション終了後にDead状態へ
+            if (m_deathTimer >= m_deathDuration) {
                 m_state = EnemyState::Dead;
             }
             break;
@@ -143,6 +221,41 @@ void Enemy::Render(Graphics* graphics) {
         case EnemyType::Boss: glowColor = { 1.0f, 0.8f, 0.3f, 0.6f }; break;
         default: glowColor = { 0.5f, 0.5f, 0.5f, 0.5f }; break;
     }
+    // Dying状態（ボス死亡アニメーション）
+    if (m_state == EnemyState::Dying) {
+        float progress = m_deathTimer / m_deathDuration;
+        
+        // 派手な爆発エフェクト（複数のリング）
+        for (int i = 0; i < 5; i++) {
+            float ringProgress = fmodf(progress * 3.0f + i * 0.2f, 1.0f);
+            float ringRadius = m_radius * (1.0f + ringProgress * 4.0f);
+            float ringAlpha = (1.0f - ringProgress) * 0.8f;
+            
+            XMFLOAT4 ringColor = {
+                1.0f,
+                0.6f + sinf(m_deathTimer * 10.0f + i) * 0.4f,
+                0.2f,
+                ringAlpha
+            };
+            graphics->DrawGlowCircle(m_position.x, m_position.y, ringRadius, ringColor, 3);
+        }
+        
+        // 中心の白いフラッシュ
+        float flashAlpha = sinf(m_deathTimer * 20.0f) * 0.5f + 0.5f;
+        graphics->DrawGlowCircle(m_position.x, m_position.y, m_radius * (1.0f - progress * 0.5f),
+            XMFLOAT4(1.0f, 1.0f, 1.0f, flashAlpha), 5);
+        
+        // 本体は徐々に小さく、透明に
+        float scale = 1.0f - progress * 0.8f;
+        float alpha = 1.0f - progress;
+        if (m_texture) {
+            float size = m_radius * 2.0f * scale;
+            graphics->DrawTexturedSprite(
+                m_position.x - m_radius * scale, m_position.y - m_radius * scale,
+                size, size, m_texture.Get(), XMFLOAT4(1, 1, 1, alpha));
+        }
+        return;  // Dying状態は通常描画をスキップ
+    }
 
     // Draw glow
     float glowSize = m_type == EnemyType::Boss ? m_radius * 1.5f : m_radius;
@@ -152,12 +265,26 @@ void Enemy::Render(Graphics* graphics) {
     // Draw texture if available, otherwise fallback to shapes
     if (m_texture) {
         float size = m_radius * 2.0f;
+        // 被弾フラッシュ時は白く光らせる
+        XMFLOAT4 tintColor = (m_flashTimer > 0.0f) 
+            ? XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f)  // フラッシュ中は白
+            : XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);  // 通常
         graphics->DrawTexturedSprite(
             m_position.x - m_radius, m_position.y - m_radius,
-            size, size, m_texture.Get(), XMFLOAT4(1, 1, 1, 1));
+            size, size, m_texture.Get(), tintColor);
+        
+        // 白フラッシュオーバーレイ（被弾時）
+        if (m_flashTimer > 0.0f) {
+            float flashAlpha = m_flashTimer / 0.1f;  // 0.1秒でフェードアウト
+            graphics->DrawCircle(m_position.x, m_position.y, m_radius, 
+                XMFLOAT4(1.0f, 1.0f, 1.0f, flashAlpha * 0.5f));
+        }
     } else {
         // Fallback: colored circle
-        graphics->DrawCircle(m_position.x, m_position.y, m_radius, glowColor);
+        XMFLOAT4 drawColor = (m_flashTimer > 0.0f) 
+            ? XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f)  // フラッシュ中は白
+            : glowColor;
+        graphics->DrawCircle(m_position.x, m_position.y, m_radius, drawColor);
     }
 
     // HP円グラフ（ボスのみ表示）
@@ -185,11 +312,13 @@ void Enemy::TakeDamage(float damage) {
     if (m_invincibleTimer > 0) return;
     
     m_health -= damage;
+    m_flashTimer = 0.1f;  // 被弾フラッシュ（0.1秒間白く光る）
     if (m_health <= 0) {
         // ボスはスペルカードが残っていれば復活
         if (m_type == EnemyType::Boss && m_currentSpell < m_spellCards - 1) {
             m_currentSpell++;
             m_health = m_maxHealth;  // HP全回復
+            m_displayHealth = m_maxHealth;  // 表示HPも満タンに
             m_patternTimer = 0.0f;   // パターンリセット
             m_shootTimer = 0.0f;
             // 次のパターンに切り替え（currentSpellに応じて）
@@ -199,7 +328,13 @@ void Enemy::TakeDamage(float damage) {
             m_showingCutin = true;     // カットイン表示
         } else {
             m_health = 0;
-            m_state = EnemyState::Dead;
+            // ボスは死亡アニメーションを再生
+            if (m_type == EnemyType::Boss) {
+                m_state = EnemyState::Dying;
+                m_deathTimer = 0.0f;
+            } else {
+                m_state = EnemyState::Dead;
+            }
         }
     }
 }

@@ -467,14 +467,33 @@ void Graphics::DrawCircleArc(float x, float y, float radius, float thickness,
     const int segments = 64;  // より滑らかに
     float angleRange = endAngle - startAngle;
     
-    // 各セグメントを小さな円として描画（滑らかに見える）
-    for (int i = 0; i <= segments; i++) {
-        float t = static_cast<float>(i) / segments;
-        float angle = startAngle + angleRange * t;
-        float arcX = x + cosf(angle) * (radius - thickness / 2);
-        float arcY = y + sinf(angle) * (radius - thickness / 2);
+    // ドーナツ形状の弧を描画（内側と外側の半径を使って四角形で描画）
+    float innerRadius = radius - thickness / 2;
+    float outerRadius = radius + thickness / 2;
+    
+    for (int i = 0; i < segments; i++) {
+        float t1 = static_cast<float>(i) / segments;
+        float t2 = static_cast<float>(i + 1) / segments;
+        float angle1 = startAngle + angleRange * t1;
+        float angle2 = startAngle + angleRange * t2;
         
-        // 小さな円として描画
-        DrawGlowCircle(arcX, arcY, thickness / 2, color, 1);
+        // 内側と外側の4点を計算
+        float innerX1 = x + cosf(angle1) * innerRadius;
+        float innerY1 = y + sinf(angle1) * innerRadius;
+        float outerX1 = x + cosf(angle1) * outerRadius;
+        float outerY1 = y + sinf(angle1) * outerRadius;
+        float innerX2 = x + cosf(angle2) * innerRadius;
+        float innerY2 = y + sinf(angle2) * innerRadius;
+        float outerX2 = x + cosf(angle2) * outerRadius;
+        float outerY2 = y + sinf(angle2) * outerRadius;
+        
+        // 2つの三角形で四角形を描画（DrawSpriteで近似）
+        // 簡易的に外側の円弧を太い線として描画
+        float midX = (outerX1 + outerX2) / 2;
+        float midY = (outerY1 + outerY2) / 2;
+        float segmentLength = sqrtf((outerX2 - outerX1) * (outerX2 - outerX1) + 
+                                     (outerY2 - outerY1) * (outerY2 - outerY1));
+        DrawSprite(midX - segmentLength/2, midY - thickness/2, 
+                   segmentLength + 2.0f, thickness, color);
     }
 }

@@ -14,6 +14,7 @@ enum class EnemyState {
     Entering,   // 登場中
     Active,     // 行動中
     Leaving,    // 退場中
+    Dying,      // 死亡アニメーション中（ボス用）
     Dead        // 撃破
 };
 
@@ -102,4 +103,11 @@ private:
     
     // HP表示イージング
     float m_displayHealth = 0.0f;     // 表示用HP（イージング付き）
+    
+    // 被弾フラッシュ
+    float m_flashTimer = 0.0f;        // 白フラッシュタイマー
+    
+    // 死亡アニメーション（ボス用）
+    float m_deathTimer = 0.0f;        // 死亡アニメーションタイマー
+    float m_deathDuration = 2.0f;     // 死亡アニメーション時間
 };

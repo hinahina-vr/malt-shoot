@@ -431,7 +431,7 @@ void Game::Render() {
         }
         
         // Build info
-        m_text->DrawText(L"LoC: 3920", textX, static_cast<float>(PLAY_AREA_HEIGHT - 60), 200, 20, 0, 2);
+        m_text->DrawText(L"LoC: 4231", textX, static_cast<float>(PLAY_AREA_HEIGHT - 60), 200, 20, 0, 2);
         m_text->DrawText(L"ひなた vs ひなひな", textX, static_cast<float>(PLAY_AREA_HEIGHT - 35), 200, 20, 0, 1);
         
         m_text->EndDraw();
@@ -458,7 +458,7 @@ void Game::RenderUI() {
             float barY = 50.0f;  // スペルカード名の下に配置
             float barWidth = PLAY_AREA_WIDTH - 40.0f;
             float barHeight = 16.0f;
-            float healthPercent = enemy->GetHealthPercent();
+            float healthPercent = enemy->GetDisplayHealthPercent();  // イージング適用版
             
             // ボス残機（★マーク）を右上に表示
             int remaining = enemy->GetRemainingSpells();
@@ -468,8 +468,10 @@ void Game::RenderUI() {
                     DirectX::XMFLOAT4(1.0f, 0.9f, 0.3f, 1.0f), 2);
             }
             
-            // スペルカード名を保存（後でD2Dで描画）
-            m_currentBossSpellName = enemy->GetSpellCardName();
+            // スペルカード名を保存（ボス名 + スペルカード名）
+            std::wstring spellName = L"ひなひな ▸ ";
+            spellName += enemy->GetSpellCardName();
+            m_currentBossSpellName = spellName;
             m_bossRemainingSpells = remaining;
             
             // 背景

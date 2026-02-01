@@ -1411,15 +1411,21 @@ void Game::RenderCutin() {
     }
 }
 
-// Boss dialogue (Hinahina)
+// Boss dialogue (Hinahina vs Kai - Touhou style)
 static const wchar_t* g_bossDialogues[] = {
-    L"ひなひな「あらあら、誰か来たの？」",
-    L"ひなひな「私はひなひな...ウイスキーの妖精よ！」",
-    L"ひなひな「この樽であなたを酔わせちゃうわ！」",
-    L"ひなひな「さあ、始めましょうか？」",
-    L"ひなひな「いくよ！」"
+    L"ひなひな「だれ？」",
+    L"かい「おや、ひなひなさんじゃありませんか」",
+    L"ひなひな「すごいよかいさん、汁まみれだよ」",
+    L"かい「ええ　旧Aoの怨念で汁が大量発生しているわ」",
+    L"ひなひな「平将門みたいだねえ」",
+    L"かい「旧Aoを除霊しにいくわよ」",
+    L"ひなひな「やだねえ」",
+    L"かい「はあ」",
+    L"ひなひな「こんなに汁が沢山発生して、ドンキーコングできるんだから、もうこのままでいいねえ」",
+    L"かい「おやりになってますわね」",
+    L"ひなひな「かいさんだからって通すわけにはいかないねえ」"
 };
-static const int g_numDialogues = 5;
+static const int g_numDialogues = 11;
 
 // ボス会話開始
 void Game::StartBossDialogue() {

@@ -1,7 +1,9 @@
 ﻿#include "ItemManager.h"
 #include "Graphics.h"
+#include "TextureLoader.h"
 #include <cmath>
 #include <cstdlib>
+#include <windows.h>
 
 constexpr float PI = 3.14159265358979f;
 
@@ -11,8 +13,62 @@ ItemManager::ItemManager() {
 ItemManager::~ItemManager() {
 }
 
-void ItemManager::Initialize() {
+void ItemManager::Initialize(Graphics* graphics) {
     m_items.reserve(MAX_ITEMS);
+    
+    // テクスチャ読み込み
+    TextureLoader loader;
+    loader.Initialize(graphics->GetDevice());
+    
+    wchar_t exePath[MAX_PATH];
+    GetModuleFileNameW(nullptr, exePath, MAX_PATH);
+    std::wstring path(exePath);
+    size_t lastSlash = path.find_last_of(L"\\/");
+    std::wstring basePath = path.substr(0, lastSlash) + L"\\..\\..\\assets\\textures\\items\\";
+    
+    ID3D11ShaderResourceView* srv = nullptr;
+    
+    // ウイスキーショット
+    if (loader.LoadTexture(basePath + L"whisky_shot.png", &srv)) {
+        m_whiskyTexture.Attach(srv);
+    }
+    
+    // モルト粒
+    srv = nullptr;
+    if (loader.LoadTexture(basePath + L"malt_grain.png", &srv)) {
+        m_maltTexture.Attach(srv);
+    }
+    
+    // 樽のしずく
+    srv = nullptr;
+    std::wstring barrelPath = path.substr(0, lastSlash) + L"\\..\\..\\assets\\textures\\barrel_item.png";
+    if (loader.LoadTexture(barrelPath, &srv)) {
+        m_barrelTexture.Attach(srv);
+    }
+    
+    // ラベルスター
+    srv = nullptr;
+    if (loader.LoadTexture(basePath + L"label_star.png", &srv)) {
+        m_labelTexture.Attach(srv);
+    }
+    
+    // 氷
+    srv = nullptr;
+    if (loader.LoadTexture(basePath + L"ice_cube.png", &srv)) {
+        m_iceCubeTexture.Attach(srv);
+    }
+    
+    // 金のボトル
+    srv = nullptr;
+    if (loader.LoadTexture(basePath + L"golden_bottle.png", &srv)) {
+        m_bottleTexture.Attach(srv);
+    }
+    
+    // フルカスク
+    srv = nullptr;
+    if (loader.LoadTexture(basePath + L"full_cask.png", &srv)) {
+        m_caskTexture.Attach(srv);
+    }
 }
 
 void ItemManager::Update(float deltaTime, XMFLOAT2 playerPos, int screenWidth, int screenHeight) {
@@ -57,8 +113,28 @@ void ItemManager::Render(Graphics* graphics) {
             if (blink < 0) continue;
         }
 
-        // シンプルな塗りつぶし円のみ（グロー削除）
-        graphics->DrawCircle(item.position.x, item.position.y, item.radius, color);
+        float size = item.radius * 2.0f;
+        
+        // 全アイテムをテクスチャで描画
+        ID3D11ShaderResourceView* texture = nullptr;
+        switch (item.type) {
+            case ItemType::WhiskyShot: texture = m_whiskyTexture.Get(); break;
+            case ItemType::MaltGrain: texture = m_maltTexture.Get(); break;
+            case ItemType::BarrelDrop: texture = m_barrelTexture.Get(); break;
+            case ItemType::LabelStar: texture = m_labelTexture.Get(); break;
+            case ItemType::IceCube: texture = m_iceCubeTexture.Get(); break;
+            case ItemType::GoldenBottle: texture = m_bottleTexture.Get(); break;
+            case ItemType::FullCask: texture = m_caskTexture.Get(); break;
+        }
+        
+        if (texture) {
+            graphics->DrawTexturedSprite(
+                item.position.x - size/2, item.position.y - size/2,
+                size, size, texture, XMFLOAT4(1,1,1,1));
+        } else {
+            // テクスチャがない場合は色で描画
+            graphics->DrawCircle(item.position.x, item.position.y, item.radius, color);
+        }
     }
 }
 

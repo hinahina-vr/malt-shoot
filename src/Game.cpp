@@ -82,7 +82,7 @@ bool Game::Initialize(HWND hWnd, int width, int height) {
     m_particles->Initialize(500);
 
     m_items = std::make_unique<ItemManager>();
-    m_items->Initialize();
+    m_items->Initialize(m_graphics.get());
 
     m_sound = std::make_unique<SoundManager>();
     m_sound->Initialize();

@@ -2,8 +2,11 @@
 
 #include <vector>
 #include <DirectXMath.h>
+#include <d3d11.h>
+#include <wrl/client.h>
 
 using namespace DirectX;
+using Microsoft::WRL::ComPtr;
 
 // Whisky-themed item types (モルトバトル)
 enum class ItemType {
@@ -34,7 +37,7 @@ public:
     ItemManager();
     ~ItemManager();
 
-    void Initialize();
+    void Initialize(Graphics* graphics);
     void Update(float deltaTime, XMFLOAT2 playerPos, int screenWidth, int screenHeight);
     void Render(Graphics* graphics);
     void Clear();
@@ -58,6 +61,15 @@ public:
 private:
     std::vector<Item> m_items;
     static const int MAX_ITEMS = 200;
+    
+    // テクスチャ（全アイテムタイプ）
+    ComPtr<ID3D11ShaderResourceView> m_whiskyTexture;    // ウイスキーショット
+    ComPtr<ID3D11ShaderResourceView> m_maltTexture;      // モルト粒
+    ComPtr<ID3D11ShaderResourceView> m_barrelTexture;    // 樽のしずく
+    ComPtr<ID3D11ShaderResourceView> m_labelTexture;     // ラベルスター
+    ComPtr<ID3D11ShaderResourceView> m_iceCubeTexture;   // 氷
+    ComPtr<ID3D11ShaderResourceView> m_bottleTexture;    // 金のボトル
+    ComPtr<ID3D11ShaderResourceView> m_caskTexture;      // フルカスク
     
     XMFLOAT4 GetItemColor(ItemType type);
     float GetItemRadius(ItemType type);

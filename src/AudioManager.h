@@ -122,18 +122,23 @@ public:
         CleanupVoices();
     }
 
-    void PlayShot(float volume = 0.5f) { PlaySound(L"shot", volume); }
-    void PlayEnemyHit(float volume = 0.7f) { PlaySound(L"hit", volume); }
-    void PlayEnemyDestroy(float volume = 0.8f) { PlaySound(L"destroy", volume); }
-    void PlayPlayerHit(float volume = 1.0f) { PlaySound(L"player_hit", volume); }
-    void PlayBomb(float volume = 1.0f) { PlaySound(L"bomb", volume); }
-    void PlayItemCollect(float volume = 0.6f) { PlaySound(L"item", volume); }
-    void PlayGraze(float volume = 0.4f) { PlaySound(L"hit", volume); }
-    void PlaySpecialReady(float volume = 0.8f) { PlaySound(L"item", volume); }
-    void PlayCursor(float volume = 0.6f) { PlaySound(L"cursor", volume); }
-    void PlayConfirm(float volume = 1.0f) { PlaySound(L"confirm", volume); }
+    void PlayShot() { PlaySound(L"shot", 0.5f * m_masterVolume); }
+    void PlayEnemyHit() { PlaySound(L"hit", 0.7f * m_masterVolume); }
+    void PlayEnemyDestroy() { PlaySound(L"destroy", 0.8f * m_masterVolume); }
+    void PlayPlayerHit() { PlaySound(L"player_hit", 1.0f * m_masterVolume); }
+    void PlayBomb() { PlaySound(L"bomb", 1.0f * m_masterVolume); }
+    void PlayItemCollect() { PlaySound(L"item", 0.6f * m_masterVolume); }
+    void PlayGraze() { PlaySound(L"hit", 0.4f * m_masterVolume); }
+    void PlaySpecialReady() { PlaySound(L"item", 0.8f * m_masterVolume); }
+    void PlayCursor() { PlaySound(L"cursor", 0.6f * m_masterVolume); }
+    void PlayConfirm() { PlaySound(L"confirm", 1.0f * m_masterVolume); }
+    
+    // SE音量設定（0.0〜1.0）
+    void SetVolume(float volume) { m_masterVolume = volume; }
+    float GetVolume() const { return m_masterVolume; }
 
 private:
+    float m_masterVolume = 1.0f;  // SE全体の音量
     // WAVファイル読み込み
     bool LoadWav(const std::wstring& name, const std::wstring& filepath) {
         HANDLE file = CreateFileW(filepath.c_str(), GENERIC_READ, FILE_SHARE_READ,

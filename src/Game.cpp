@@ -776,6 +776,7 @@ void Game::UpdateSettingsMenu() {
                 m_bgm->SetVolume(m_bgmVolume * 10);
             } else if (m_menuSelection == 1) {
                 m_sfxVolume = max(0, m_sfxVolume - 10);
+                if (m_sound) m_sound->SetVolume(m_sfxVolume / 100.0f);
             }
         }
         leftPressed = true;
@@ -788,6 +789,7 @@ void Game::UpdateSettingsMenu() {
                 m_bgm->SetVolume(m_bgmVolume * 10);
             } else if (m_menuSelection == 1) {
                 m_sfxVolume = min(100, m_sfxVolume + 10);
+                if (m_sound) m_sound->SetVolume(m_sfxVolume / 100.0f);
             }
         }
         rightPressed = true;
@@ -1356,23 +1358,57 @@ void Game::RenderCutin() {
     if (m_currentCutinIndex < 0 || m_currentCutinIndex >= 5) return;
     if (!m_cutinTextures[m_currentCutinIndex]) return;
     
+    // タイマー進行（0→2.0秒）
+    float t = 2.0f - m_cutinTimer;  // 0→2.0に変換
+    
     // フェードイン・アウト計算
     float alpha = 1.0f;
-    if (m_cutinTimer > 1.8f) {
-        alpha = (2.0f - m_cutinTimer) / 0.2f;  // フェードイン
-    } else if (m_cutinTimer < 0.2f) {
-        alpha = m_cutinTimer / 0.2f;  // フェードアウト
+    if (t < 0.2f) {
+        alpha = t / 0.2f;  // フェードイン
+    } else if (t > 1.8f) {
+        alpha = (2.0f - t) / 0.2f;  // フェードアウト
     }
     
-    // 画面中央にカットイン表示（プレイエリア内）
-    float cutinWidth = 600.0f;
-    float cutinHeight = 600.0f;
+    // 拡大アニメーション（登場時に大きくなる）
+    float scale = 1.0f;
+    if (t < 0.3f) {
+        // イーズアウト：1.5→1.0に縮小
+        float p = t / 0.3f;
+        scale = 1.5f - 0.5f * (p * p);  // 二次イージング
+    }
+    
+    // 画面全体に大きく表示
+    float baseWidth = static_cast<float>(PLAY_AREA_WIDTH);
+    float baseHeight = static_cast<float>(PLAY_AREA_HEIGHT);
+    float cutinWidth = baseWidth * scale;
+    float cutinHeight = baseHeight * scale;
     float x = (PLAY_AREA_WIDTH - cutinWidth) / 2.0f;
     float y = (PLAY_AREA_HEIGHT - cutinHeight) / 2.0f;
     
+    // フラッシュ効果（登場時に白フラッシュ）
+    if (t < 0.15f) {
+        float flashAlpha = 1.0f - (t / 0.15f);
+        m_graphics->DrawSprite(0, 0, static_cast<float>(PLAY_AREA_WIDTH), static_cast<float>(PLAY_AREA_HEIGHT),
+            DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, flashAlpha * 0.8f));
+    }
+    
+    // カットイン画像描画
     m_graphics->DrawTexturedSprite(x, y, cutinWidth, cutinHeight,
         m_cutinTextures[m_currentCutinIndex].Get(),
         DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, alpha));
+    
+    // キラキラ効果（ランダムな光）
+    if (t > 0.2f && t < 1.8f) {
+        for (int i = 0; i < 3; i++) {
+            float sparkleT = fmodf(t * 5.0f + i * 0.7f, 1.0f);
+            float sparkleAlpha = sinf(sparkleT * 3.14159f);
+            float sparkleX = fmodf((t * 200.0f + i * 150.0f), static_cast<float>(PLAY_AREA_WIDTH));
+            float sparkleY = fmodf((t * 180.0f + i * 220.0f), static_cast<float>(PLAY_AREA_HEIGHT));
+            
+            m_graphics->DrawGlowCircle(sparkleX, sparkleY, 15.0f + sparkleT * 10.0f,
+                DirectX::XMFLOAT4(1.0f, 1.0f, 0.8f, sparkleAlpha * 0.6f), 3);
+        }
+    }
 }
 
 // Boss dialogue (Hinahina)

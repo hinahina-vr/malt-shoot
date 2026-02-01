@@ -120,12 +120,7 @@ void EnemyManager::SpawnEnemy(float x, float y, float health, int patternId, Ene
             break;
         case EnemyType::Boss:
             if (m_bossTexture) enemy->SetTexture(m_bossTexture.Get());
-            // アニメーションフレームを設定
-            enemy->SetAnimFrames(
-                m_bossFrames[0].Get(),
-                m_bossFrames[1].Get(),
-                m_bossFrames[2].Get()
-            );
+            // 1枚絵を使用（アニメーションなし）
             break;
         default:
             break;

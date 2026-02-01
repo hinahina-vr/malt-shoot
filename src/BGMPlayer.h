@@ -47,6 +47,7 @@ public:
 
     void SetVolume(int volume) {
         // Volume: 0-1000
+        m_volume = volume;  // 保存
         wchar_t cmd[256];
         swprintf_s(cmd, L"setaudio bgm volume to %d", volume);
         mciSendStringW(cmd, nullptr, 0, nullptr);
@@ -63,8 +64,10 @@ private:
         MCIERROR err = mciSendStringW(openCmd.c_str(), nullptr, 0, nullptr);
         if (err != 0) return;
         
-        // Set volume to 100%
-        mciSendStringW(L"setaudio bgm volume to 1000", nullptr, 0, nullptr);
+        // Set volume to saved value（保存した音量を適用）
+        wchar_t cmd[256];
+        swprintf_s(cmd, L"setaudio bgm volume to %d", m_volume);
+        mciSendStringW(cmd, nullptr, 0, nullptr);
         
         // Play with repeat
         mciSendStringW(L"play bgm repeat", nullptr, 0, nullptr);
@@ -74,4 +77,5 @@ private:
     bool m_initialized;
     bool m_isPlaying;
     std::wstring m_soundPath;
+    int m_volume = 600;  // デフォルト60%
 };

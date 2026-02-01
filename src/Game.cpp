@@ -36,7 +36,7 @@ Game::Game()
     , m_bgmVolume(10)
     , m_sfxVolume(100)
     , m_gameState(GameState::Title)
-    , m_difficulty(Difficulty::Normal)
+    , m_difficulty(Difficulty::Ume)
     , m_titleSelection(1)
     , m_gameOverSelection(0)
     , m_continueCount(3)
@@ -188,10 +188,8 @@ void Game::Update() {
     m_enemyManager->SetPlayerPosition(m_player->GetPosition());
     m_enemyManager->Update(m_deltaTime, PLAY_AREA_WIDTH, PLAY_AREA_HEIGHT);
     
-    // ボスウェーブ開始を検出して3秒ディレイ後にセリフ開始
-    if (m_enemyManager->DidBossWaveJustStart() && !m_bossMode) {
-        m_waitingForBoss = true;
-        m_bossSpawnDelay = 0.0f;
+    // ボスウェーブフラグをクリア（使用しない）
+    if (m_enemyManager->DidBossWaveJustStart()) {
         m_enemyManager->ClearBossWaveStartFlag();
     }
     
@@ -213,7 +211,7 @@ void Game::Update() {
             m_bgm->PlayBossBGM();
             
             // ボスをスポーン！
-            m_enemyManager->SpawnEnemy(320.0f, 150.0f, 500.0f, 3, EnemyType::Boss);
+            m_enemyManager->SpawnEnemy(320.0f, 150.0f, 1500.0f, 3, EnemyType::Boss);
             
             StartBossDialogue();
         }
@@ -762,7 +760,7 @@ void Game::SpawnBoss() {
     m_bgm->PlayBossBGM();
     
     // 最終ボス「ひなひな」を生成（体力800、4スペルカード完備）
-    m_enemyManager->SpawnEnemy(PLAY_AREA_WIDTH / 2.0f, 150.0f, 800.0f, 0, EnemyType::Boss);
+    m_enemyManager->SpawnEnemy(PLAY_AREA_WIDTH / 2.0f, 150.0f, 2400.0f, 0, EnemyType::Boss);
     
     // ボス会話開始！
     StartBossDialogue();
@@ -996,7 +994,7 @@ void Game::UpdateTitle() {
     // Left/Right to select difficulty
     if (GetAsyncKeyState(VK_LEFT) & 0x8000) {
         if (!leftPressed) {
-            m_titleSelection = (m_titleSelection - 1 + 3) % 3;
+            m_titleSelection = (m_titleSelection - 1 + 5) % 5;
             if (m_sound) m_sound->PlayCursor();
         }
         leftPressed = true;
@@ -1004,7 +1002,7 @@ void Game::UpdateTitle() {
     
     if (GetAsyncKeyState(VK_RIGHT) & 0x8000) {
         if (!rightPressed) {
-            m_titleSelection = (m_titleSelection + 1) % 3;
+            m_titleSelection = (m_titleSelection + 1) % 5;
             if (m_sound) m_sound->PlayCursor();
         }
         rightPressed = true;
@@ -1045,21 +1043,28 @@ void Game::RenderTitle() {
         m_text->BeginDraw();
         
         // Difficulty selection（日本語化）
-        const wchar_t* difficulties[] = { L"かんたん", L"ふつう", L"むずい" };
+        const wchar_t* difficulties[] = { L"あまい", L"うめ", L"からい", L"ブオー", L"カニ漁" };
         float diffY = m_height - 280.0f;
         float centerX = m_width / 2.0f;
         
-        for (int i = 0; i < 3; i++) {
-            float x = centerX - 170.0f + i * 140.0f;
+        // 影を描画してから本体を描画（視認性向上）
+        float shadowOffset = 3.0f;
+        for (int i = 0; i < 5; i++) {
+            float x = centerX - 280.0f + i * 115.0f;
+            // 影（黒）
+            m_text->DrawText(difficulties[i], x + shadowOffset, diffY + shadowOffset, 100, 40, 2, 2);  // colorType 2 = black
+            // 本体
             int colorType = (i == m_titleSelection) ? 1 : 0;  // Gold for selected, white otherwise
-            m_text->DrawText(difficulties[i], x, diffY, 120, 40, 2, colorType);
+            m_text->DrawText(difficulties[i], x, diffY, 100, 40, 2, colorType);
         }
         
-        // Selection arrows
-        m_text->DrawText(L"◀", centerX - 220.0f, diffY, 40, 40, 2, 1);
-        m_text->DrawText(L"▶", centerX + 200.0f, diffY, 40, 40, 2, 1);
+        // Selection arrows（影付き）
+        m_text->DrawText(L"◀", centerX - 330.0f + shadowOffset, diffY + shadowOffset, 40, 40, 2, 2);
+        m_text->DrawText(L"◀", centerX - 330.0f, diffY, 40, 40, 2, 1);
+        m_text->DrawText(L"▶", centerX + 290.0f + shadowOffset, diffY + shadowOffset, 40, 40, 2, 2);
+        m_text->DrawText(L"▶", centerX + 290.0f, diffY, 40, 40, 2, 1);
         
-        // "Press Z to Start" fading text - centered（日本語化）
+        // "Press Z to Start" fading text - centered（日本語化・影付き）
         float time = static_cast<float>(GetTickCount64()) * 0.003f;
         float alpha = (sinf(time) + 1.0f) * 0.5f;
         
@@ -1067,6 +1072,9 @@ void Game::RenderTitle() {
         float textWidth = static_cast<float>(m_width);  // 画面幅全体
         float textX = 0.0f;  // 左端から
         float textY = m_height - 180.0f;
+        // 影
+        m_text->DrawTextWithAlpha(startText, textX + shadowOffset, textY + shadowOffset, textWidth, 80, 3, 2, alpha * 0.7f);
+        // 本体
         m_text->DrawTextWithAlpha(startText, textX, textY, textWidth, 80, 3, 1, alpha);
         
         m_text->EndDraw();
@@ -1075,18 +1083,22 @@ void Game::RenderTitle() {
 
 float Game::GetBulletSpeedMultiplier() const {
     switch (m_difficulty) {
-        case Difficulty::Easy: return 0.7f;
-        case Difficulty::Normal: return 1.0f;
-        case Difficulty::Hard: return 1.3f;
+        case Difficulty::Amai: return 0.5f;
+        case Difficulty::Ume: return 0.8f;
+        case Difficulty::Karai: return 1.0f;
+        case Difficulty::Buoo: return 1.3f;
+        case Difficulty::Kaniryo: return 1.8f;
         default: return 1.0f;
     }
 }
 
 float Game::GetEnemyBulletCountMultiplier() const {
     switch (m_difficulty) {
-        case Difficulty::Easy: return 0.6f;
-        case Difficulty::Normal: return 1.0f;
-        case Difficulty::Hard: return 1.5f;
+        case Difficulty::Amai: return 0.4f;
+        case Difficulty::Ume: return 0.7f;
+        case Difficulty::Karai: return 1.0f;
+        case Difficulty::Buoo: return 1.3f;
+        case Difficulty::Kaniryo: return 2.0f;
         default: return 1.0f;
     }
 }
@@ -1375,9 +1387,9 @@ void Game::UpdateCutin() {
                 // スペルカード切り替え時に敵弾消し
                 m_bulletManager->Clear();
                 
-                // スペルカード切り替えSE
+                // スペルカード発動SE
                 if (m_sound) {
-                    m_sound->PlayEnemyDestroy();  // スペル切替時に派手な音
+                    m_sound->PlaySpellcard();  // スペルカード発動音
                 }
             }
         }
@@ -1483,17 +1495,32 @@ void Game::UpdateBossDialogue() {
     int len = static_cast<int>(wcslen(g_bossDialogues[m_dialogueLine]));
     m_dialogueCharIndex = len;  // 全文字表示
     
-    // Zキー or マウス左クリックで次のセリフ
-    static bool zPressed = false;
+    // Zキー or マウス左クリックで次のセリフ（連打・押しっぱなし防止）
+    static bool zPressed = true;  // 初期状態でtrue（最初の入力を無視）
+    static bool firstFrame = true;
+    
+    // セリフ開始直後は0.3秒間入力を無視
+    static float dialogueInputCooldown = 0.0f;
+    if (firstFrame) {
+        dialogueInputCooldown = 0.3f;
+        firstFrame = false;
+    }
+    if (dialogueInputCooldown > 0.0f) {
+        dialogueInputCooldown -= m_deltaTime;
+        return;
+    }
+    
     bool isPressed = m_input->IsKeyDown('Z') || (GetAsyncKeyState(VK_LBUTTON) & 0x8000);
     if (isPressed) {
         if (!zPressed) {
             zPressed = true;
             m_dialogueLine++;
             m_dialogueCharIndex = 0;
+            dialogueInputCooldown = 0.15f;  // 次の入力まで0.15秒待機
             
             if (m_dialogueLine >= g_numDialogues) {
                 m_bossDialogueActive = false;
+                firstFrame = true;  // 次回のためにリセット
             }
         }
     } else {

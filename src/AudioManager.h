@@ -58,6 +58,7 @@ public:
         LoadAudio(L"cursor", m_soundPath + L"cursor.mp3");
         LoadAudio(L"confirm", m_soundPath + L"confirm.mp3");
         LoadAudio(L"item", m_soundPath + L"hina_eyao.wav");
+        LoadAudio(L"spellcard", m_soundPath + L"stage1_boss_spellcard.wav");
 
         return true;
     }
@@ -132,6 +133,7 @@ public:
     void PlaySpecialReady() { PlaySound(L"item", 0.8f * m_masterVolume); }
     void PlayCursor() { PlaySound(L"cursor", 0.6f * m_masterVolume); }
     void PlayConfirm() { PlaySound(L"confirm", 1.0f * m_masterVolume); }
+    void PlaySpellcard() { PlaySound(L"spellcard", 1.0f * m_masterVolume); }
     
     // SE音量設定（0.0〜1.0）
     void SetVolume(float volume) { m_masterVolume = volume; }

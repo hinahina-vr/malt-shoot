@@ -26,9 +26,11 @@ enum class GameState {
 };
 
 enum class Difficulty {
-    Easy,
-    Normal,
-    Hard
+    Amai,    // あまい
+    Ume,     // うめ
+    Karai,   // からい
+    Buoo,    // ブオー
+    Kaniryo  // カニ漁
 };
 
 class Game {
@@ -111,7 +113,7 @@ private:
     // Settings menu (ESC to open)
     bool m_isPaused;
     int m_menuSelection;
-    int m_bgmVolume = 75;   // デフォルト75%
+    int m_bgmVolume = 60;   // デフォルト60%
     int m_sfxVolume = 100;
     void UpdateSettingsMenu();
     void RenderSettingsMenu();

@@ -366,7 +366,7 @@ void Enemy::TakeDamage(float damage) {
 void Enemy::ExecuteBulletPattern(BulletManager* bulletManager, XMFLOAT2 playerPos) {
     switch (m_patternId) {
         case 0: // Flower pattern (Touhou style)
-            if (m_shootTimer >= 1.5f) {
+            if (m_shootTimer >= 0.5f) {  // 3倍激しく
                 bulletManager->SpawnFlower(
                     m_position.x, m_position.y,
                     6, 5, 120.0f, m_patternTimer,
@@ -377,7 +377,7 @@ void Enemy::ExecuteBulletPattern(BulletManager* bulletManager, XMFLOAT2 playerPo
             break;
 
         case 1: // Rose curve pattern
-            if (m_shootTimer >= 0.15f) {
+            if (m_shootTimer >= 0.05f) {  // 3倍激しく
                 bulletManager->SpawnRose(
                     m_position.x, m_position.y,
                     8, 150.0f, m_patternTimer * 3.0f,
@@ -388,7 +388,7 @@ void Enemy::ExecuteBulletPattern(BulletManager* bulletManager, XMFLOAT2 playerPo
             break;
 
         case 2: // Wave pattern with aimed bullets
-            if (m_shootTimer >= 0.2f) {
+            if (m_shootTimer >= 0.07f) {  // 3倍激しく
                 bulletManager->SpawnWave(
                     m_position.x, m_position.y,
                     12, 140.0f, 0.3f, 5.0f, m_patternTimer,
@@ -409,7 +409,7 @@ void Enemy::ExecuteBulletPattern(BulletManager* bulletManager, XMFLOAT2 playerPo
             break;
 
         case 3: // Double ring pattern
-            if (m_shootTimer >= 0.8f) {
+            if (m_shootTimer >= 0.27f) {  // 3倍激しく
                 bulletManager->SpawnRing(
                     m_position.x, m_position.y,
                     20, 130.0f, 0.0f,
@@ -422,7 +422,7 @@ void Enemy::ExecuteBulletPattern(BulletManager* bulletManager, XMFLOAT2 playerPo
             break;
 
         case 4: // Spiral with color gradient
-            if (m_shootTimer >= 0.08f) {
+            if (m_shootTimer >= 0.03f) {  // 3倍激しく
                 float hue = fmodf(m_patternTimer * 0.5f, 1.0f);
                 XMFLOAT4 color = {
                     fabsf(sinf(hue * 2.0f * PI)),

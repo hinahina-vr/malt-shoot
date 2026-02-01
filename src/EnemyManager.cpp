@@ -81,15 +81,16 @@ void EnemyManager::Update(float deltaTime, int screenWidth, int screenHeight) {
     }
 
     if (allDead && m_waveTimer > 2.0f) {
-        // ボスウェーブ時は自動進行しない（Game側でクリア判定）
-        if ((m_currentWave % 4) != 3) {
-            // 次がボスウェーブなら5秒待機、それ以外は2秒
-            float waitTime = ((m_currentWave + 1) % 4 == 3) ? 5.0f : 2.0f;
-            if (m_waveTimer > waitTime) {
-                m_currentWave++;
-                SpawnWave(m_currentWave);
-                m_waveTimer = 0.0f;
+        // ウェーブ自動進行（ボスウェーブはスキップして雑魚ループ）
+        float waitTime = 2.0f;
+        if (m_waveTimer > waitTime) {
+            m_currentWave++;
+            // ボスウェーブ（4の倍数-1）はスキップして雑魚に戻る
+            if ((m_currentWave % 4) == 3) {
+                m_currentWave++;  // ボスウェーブを飛ばす
             }
+            SpawnWave(m_currentWave);
+            m_waveTimer = 0.0f;
         }
     }
 }

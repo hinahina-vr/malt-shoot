@@ -72,7 +72,7 @@ bool Game::Initialize(HWND hWnd, int width, int height) {
     m_bulletManager->Initialize(m_graphics.get());
 
     m_player = std::make_unique<Player>();
-    m_player->Initialize(m_graphics.get(), m_bulletManager.get());
+    m_player->Initialize(m_graphics.get(), m_bulletManager.get(), m_sound.get());
     m_player->SetPosition(PLAY_AREA_WIDTH / 2.0f, PLAY_AREA_HEIGHT - 100.0f);
 
     m_enemyManager = std::make_unique<EnemyManager>();
@@ -154,6 +154,9 @@ void Game::Update() {
         case GameState::StageClear:
             UpdateStageClear();
             return;
+        case GameState::VictoryDialogue:
+            UpdateVictoryDialogue();
+            return;
     }
     
     // ESC to toggle pause/settings menu
@@ -181,19 +184,31 @@ void Game::Update() {
     m_enemyManager->SetPlayerPosition(m_player->GetPosition());
     m_enemyManager->Update(m_deltaTime, PLAY_AREA_WIDTH, PLAY_AREA_HEIGHT);
     
-    // ボスウェーブ開始を検出してセリフ開始（通常プレイ時）
+    // ボスウェーブ開始を検出して3秒ディレイ後にセリフ開始
     if (m_enemyManager->DidBossWaveJustStart() && !m_bossMode) {
-        m_bossMode = true;
-        m_bgm->Stop();
-        m_bgm->PlayBossBGM();
-        StartBossDialogue();
+        m_waitingForBoss = true;
+        m_bossSpawnDelay = 0.0f;
         m_enemyManager->ClearBossWaveStartFlag();
     }
     
-    // ボス撃破時→ステージクリア
+    // ボス登場前3秒ディレイ処理
+    if (m_waitingForBoss) {
+        m_bossSpawnDelay += m_deltaTime;
+        if (m_bossSpawnDelay >= 3.0f) {
+            m_waitingForBoss = false;
+            m_bossMode = true;
+            m_bgm->Stop();
+            m_bgm->PlayBossBGM();
+            StartBossDialogue();
+        }
+    }
+    
+    // ボス撃破時→勝利セリフ→ステージクリア
     if (m_enemyManager->IsBossWave() && m_enemyManager->AllEnemiesDead()) {
         if (m_score > m_hiScore) m_hiScore = m_score;
-        m_gameState = GameState::StageClear;
+        m_victoryDialogueTimer = 0.0f;
+        m_victoryDialogueLine = 0;
+        m_gameState = GameState::VictoryDialogue;
     }
     
     m_bulletManager->Update(m_deltaTime, PLAY_AREA_WIDTH, PLAY_AREA_HEIGHT);
@@ -223,8 +238,13 @@ void Game::Update() {
     // Collect items
     bool autoCollect = m_player->GetPosition().y < 200.0f; // Auto-collect at top
     auto collected = m_items->CollectItems(m_player->GetPosition(), 20.0f, autoCollect);
-    m_power += collected.power;
-    if (m_power > m_maxPower) m_power = m_maxPower;
+    
+    // パワー取得→プレイヤーに渡して進化システム
+    if (collected.power > 0) {
+        m_player->AddPower(collected.power);
+    }
+    m_power = m_player->GetPower();  // UI表示用に同期
+    
     m_score += collected.points;
     m_bombs += collected.bombs;
     m_lives += collected.lives;
@@ -363,6 +383,13 @@ void Game::Render() {
     // Render stage clear screen
     if (m_gameState == GameState::StageClear) {
         RenderStageClear();
+        m_graphics->EndFrame();
+        return;
+    }
+    
+    // Render victory dialogue (ボス撃破後セリフ)
+    if (m_gameState == GameState::VictoryDialogue) {
+        RenderVictoryDialogue();
         m_graphics->EndFrame();
         return;
     }
@@ -1056,6 +1083,60 @@ void Game::RenderStageClear() {
         
         m_text->EndDraw();
     }
+}
+
+void Game::UpdateVictoryDialogue() {
+    m_victoryDialogueTimer += m_deltaTime;
+    
+    // 3秒間セリフ表示後、StageClearへ
+    if (m_victoryDialogueTimer > 3.0f) {
+        m_gameState = GameState::StageClear;
+    }
+    
+    // Zキーでスキップ
+    static bool zPressed = false;
+    if (GetAsyncKeyState('Z') & 0x8000) {
+        if (!zPressed) {
+            m_gameState = GameState::StageClear;
+        }
+        zPressed = true;
+    } else {
+        zPressed = false;
+    }
+}
+
+void Game::RenderVictoryDialogue() {
+    // 背景を少し暗く
+    m_graphics->DrawSprite(0, 0, static_cast<float>(PLAY_AREA_WIDTH), static_cast<float>(PLAY_AREA_HEIGHT),
+        DirectX::XMFLOAT4(0.0f, 0.0f, 0.0f, 0.4f));
+    
+    // セリフウィンドウ
+    float windowY = PLAY_AREA_HEIGHT - 200.0f;
+    m_graphics->DrawSprite(20, windowY, PLAY_AREA_WIDTH - 40, 180,
+        DirectX::XMFLOAT4(0.0f, 0.0f, 0.3f, 0.9f));
+    m_graphics->DrawSprite(25, windowY + 5, PLAY_AREA_WIDTH - 50, 170,
+        DirectX::XMFLOAT4(0.1f, 0.1f, 0.4f, 0.9f));
+    
+    // プレイヤーポートレート
+    if (m_portraitHinata) {
+        m_graphics->DrawTexturedSprite(40, windowY + 20, 140, 140, m_portraitHinata.Get());
+    }
+    
+    // 勝利セリフ
+    m_text->BeginDraw();
+    const wchar_t* victoryLines[] = {
+        L"やったー！勝ったー！",
+        L"ひなひなの勝利！\nウイスキーの精霊さん、また遊ぼうね！"
+    };
+    
+    int lineIndex = m_victoryDialogueTimer < 1.5f ? 0 : 1;
+    m_text->DrawText(victoryLines[lineIndex], 200, windowY + 50, 400, 120, 2, 0);
+    
+    // スキップヒント
+    float alpha = (sinf(m_victoryDialogueTimer * 4.0f) + 1.0f) * 0.5f;
+    m_text->DrawTextWithAlpha(L"Zキーでスキップ", PLAY_AREA_WIDTH - 200, windowY + 150, 160, 30, 1, 0, alpha);
+    
+    m_text->EndDraw();
 }
 
 void Game::ResetGame() {

@@ -2,6 +2,7 @@
 #include "Graphics.h"
 #include "Input.h"
 #include "BulletManager.h"
+#include "SoundManager.h"
 #include "TextureLoader.h"
 #include <windows.h>
 
@@ -17,14 +18,16 @@ Player::Player()
     , m_currentCooldown(0.0f)
     , m_isSlow(false)
     , m_bulletManager(nullptr)
+    , m_sound(nullptr)
 {
 }
 
 Player::~Player() {
 }
 
-void Player::Initialize(Graphics* graphics, BulletManager* bulletManager) {
+void Player::Initialize(Graphics* graphics, BulletManager* bulletManager, SoundManager* sound) {
     m_bulletManager = bulletManager;
+    m_sound = sound;
     
     // Load player texture
     TextureLoader loader;
@@ -75,14 +78,44 @@ void Player::Update(Input* input, float deltaTime, int screenWidth, int screenHe
     m_currentCooldown -= deltaTime;
     bool shooting = input->IsKeyDown('Z') || (GetAsyncKeyState(VK_LBUTTON) & 0x8000);
     if (shooting && m_currentCooldown <= 0.0f) {
-        // 自機弾を発射（弾速2倍！）- 中央から1発
         if (m_bulletManager) {
-            m_bulletManager->SpawnPlayerBullet(m_position.x, m_position.y - 20.0f, 0.0f, -1600.0f);
+            // 進化レベルに応じた攻撃パターン（5段階）
+            switch (m_evolutionLevel) {
+                case 0:  // 初期：中央1発
+                    m_bulletManager->SpawnPlayerBullet(m_position.x, m_position.y - 20.0f, 0.0f, -1600.0f);
+                    break;
+                case 1:  // 進化1：2発
+                    m_bulletManager->SpawnPlayerBullet(m_position.x - 10.0f, m_position.y - 20.0f, 0.0f, -1600.0f);
+                    m_bulletManager->SpawnPlayerBullet(m_position.x + 10.0f, m_position.y - 20.0f, 0.0f, -1600.0f);
+                    break;
+                case 2:  // 進化2：3発
+                    m_bulletManager->SpawnPlayerBullet(m_position.x, m_position.y - 20.0f, 0.0f, -1600.0f);
+                    m_bulletManager->SpawnPlayerBullet(m_position.x - 15.0f, m_position.y - 10.0f, 0.0f, -1600.0f);
+                    m_bulletManager->SpawnPlayerBullet(m_position.x + 15.0f, m_position.y - 10.0f, 0.0f, -1600.0f);
+                    break;
+                case 3:  // 進化3：3発 + ホーミングミサイル
+                    m_bulletManager->SpawnPlayerBullet(m_position.x, m_position.y - 20.0f, 0.0f, -1600.0f);
+                    m_bulletManager->SpawnPlayerBullet(m_position.x - 15.0f, m_position.y - 10.0f, 0.0f, -1600.0f);
+                    m_bulletManager->SpawnPlayerBullet(m_position.x + 15.0f, m_position.y - 10.0f, 0.0f, -1600.0f);
+                    m_bulletManager->SpawnHomingMissile(m_position.x - 30.0f, m_position.y, -50.0f, -400.0f);
+                    m_bulletManager->SpawnHomingMissile(m_position.x + 30.0f, m_position.y, 50.0f, -400.0f);
+                    break;
+                case 4:  // MAX進化：5発 + ホーミングミサイル×4
+                    m_bulletManager->SpawnPlayerBullet(m_position.x, m_position.y - 20.0f, 0.0f, -1800.0f);
+                    m_bulletManager->SpawnPlayerBullet(m_position.x - 12.0f, m_position.y - 15.0f, 0.0f, -1700.0f);
+                    m_bulletManager->SpawnPlayerBullet(m_position.x + 12.0f, m_position.y - 15.0f, 0.0f, -1700.0f);
+                    m_bulletManager->SpawnPlayerBullet(m_position.x - 24.0f, m_position.y - 10.0f, -50.0f, -1600.0f);
+                    m_bulletManager->SpawnPlayerBullet(m_position.x + 24.0f, m_position.y - 10.0f, 50.0f, -1600.0f);
+                    m_bulletManager->SpawnHomingMissile(m_position.x - 35.0f, m_position.y, -80.0f, -400.0f);
+                    m_bulletManager->SpawnHomingMissile(m_position.x + 35.0f, m_position.y, 80.0f, -400.0f);
+                    m_bulletManager->SpawnHomingMissile(m_position.x - 20.0f, m_position.y + 10.0f, -40.0f, -350.0f);
+                    m_bulletManager->SpawnHomingMissile(m_position.x + 20.0f, m_position.y + 10.0f, 40.0f, -350.0f);
+                    break;
+            }
             
-            // パワーアップでホーミングミサイル（パワー2以上で発射）
-            if (m_power >= 2) {
-                m_bulletManager->SpawnHomingMissile(m_position.x - 25.0f, m_position.y, -50.0f, -400.0f);
-                m_bulletManager->SpawnHomingMissile(m_position.x + 25.0f, m_position.y, 50.0f, -400.0f);
+            // 弾発射音
+            if (m_sound) {
+                m_sound->PlayShot();
             }
         }
         m_currentCooldown = m_shootCooldown;
@@ -120,4 +153,30 @@ void Player::Render(Graphics* graphics) {
 void Player::SetPosition(float x, float y) {
     m_position.x = x;
     m_position.y = y;
+}
+
+void Player::SetPower(int power) {
+    m_power = power;
+    if (m_power > 100) m_power = 100;
+    if (m_power < 0) m_power = 0;
+}
+
+void Player::AddPower(int amount) {
+    m_power += amount;
+    
+    // パワー100で進化！
+    while (m_power >= 100 && m_evolutionLevel < 4) {
+        m_power -= 100;
+        m_evolutionLevel++;
+        
+        // 進化エフェクト音
+        if (m_sound) {
+            m_sound->PlaySpecialReady();
+        }
+    }
+    
+    // 最大進化時はパワーをキャップ
+    if (m_evolutionLevel >= 4 && m_power > 100) {
+        m_power = 100;
+    }
 }

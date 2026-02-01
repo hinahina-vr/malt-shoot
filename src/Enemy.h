@@ -73,6 +73,13 @@ public:
         }
         return L"";
     }
+    
+    // ボスアニメーションフレーム設定
+    void SetAnimFrames(ID3D11ShaderResourceView* frame1, ID3D11ShaderResourceView* frame2, ID3D11ShaderResourceView* frame3) {
+        if (frame1) m_animFrames[0] = frame1;
+        if (frame2) m_animFrames[1] = frame2;
+        if (frame3) m_animFrames[2] = frame3;
+    }
 
 private:
     void ExecuteBulletPattern(BulletManager* bulletManager, DirectX::XMFLOAT2 playerPos);
@@ -110,4 +117,10 @@ private:
     // 死亡アニメーション（ボス用）
     float m_deathTimer = 0.0f;        // 死亡アニメーションタイマー
     float m_deathDuration = 2.0f;     // 死亡アニメーション時間
+    
+    // ボスアニメーションフレーム
+    ComPtr<ID3D11ShaderResourceView> m_animFrames[3];
+    int m_currentFrame = 0;
+    float m_frameTimer = 0.0f;
+    float m_frameInterval = 0.2f;     // フレーム切り替え間隔（0.2秒）
 };

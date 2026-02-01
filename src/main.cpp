@@ -37,12 +37,12 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     int windowWidth = rect.right - rect.left;
     int windowHeight = rect.bottom - rect.top;
 
-    // Create window
+    // Create window（左上に配置）
     HWND hWnd = CreateWindow(
         L"DanmakuShooterClass",
         L"Malt-Shoot ~ Danmaku Shooting Game",
         WS_OVERLAPPEDWINDOW,
-        CW_USEDEFAULT, CW_USEDEFAULT,
+        0, 0,  // 左上に配置
         windowWidth, windowHeight,
         nullptr, nullptr, hInstance, nullptr
     );

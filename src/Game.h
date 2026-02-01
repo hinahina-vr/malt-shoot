@@ -21,6 +21,7 @@ enum class GameState {
     Playing,
     Paused,
     GameOver,
+    VictoryDialogue,  // ボス撃破後セリフ
     StageClear
 };
 
@@ -126,6 +127,8 @@ private:
     void RenderGameOver();
     void UpdateStageClear();
     void RenderStageClear();
+    void UpdateVictoryDialogue();
+    void RenderVictoryDialogue();
     void ResetGame();
     
     // ハイスコア保存
@@ -154,6 +157,10 @@ private:
     float m_dialogueCharTimer = 0.0f;  // タイプライター効果
     int m_dialogueCharIndex = 0;
     bool m_bossSpawned = false;
+    float m_bossSpawnDelay = 0.0f;     // ボス登場前ディレイ（3秒）
+    bool m_waitingForBoss = false;     // ボス登場待機中
+    float m_victoryDialogueTimer = 0.0f;  // 勝利セリフタイマー
+    int m_victoryDialogueLine = 0;        // 勝利セリフ行
     ComPtr<ID3D11ShaderResourceView> m_portraitHinata;  // ひなひな顔イラスト
     ComPtr<ID3D11ShaderResourceView> m_portraitKai;     // かい顔イラスト
     int m_playerCharacter = 0;  // 0=ひなひな, 1=かい

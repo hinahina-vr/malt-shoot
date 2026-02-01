@@ -94,6 +94,15 @@ void Enemy::Update(float deltaTime, int screenWidth, int screenHeight, BulletMan
                 m_flashTimer -= deltaTime;
             }
             
+            // ボスアニメーションフレーム更新
+            if (m_type == EnemyType::Boss) {
+                m_frameTimer += deltaTime;
+                if (m_frameTimer >= m_frameInterval) {
+                    m_frameTimer = 0.0f;
+                    m_currentFrame = (m_currentFrame + 1) % 3;
+                }
+            }
+            
             // 雑魚敵タイムアウト（ボス以外、8秒で退場開始）
             if (m_type != EnemyType::Boss && m_lifetime > m_maxLifetime) {
                 m_state = EnemyState::Leaving;
@@ -265,13 +274,28 @@ void Enemy::Render(Graphics* graphics) {
     // Draw texture if available, otherwise fallback to shapes
     if (m_texture) {
         float size = m_radius * 2.0f;
+        
+        // ボスは浮遊アニメーション（上下に揺れる）
+        float drawY = m_position.y;
+        if (m_type == EnemyType::Boss) {
+            float floatOffset = sinf(m_patternTimer * 2.0f) * 8.0f;  // 上下8pxの揺れ
+            drawY += floatOffset;
+        }
+        
         // 被弾フラッシュ時は白く光らせる
         XMFLOAT4 tintColor = (m_flashTimer > 0.0f) 
             ? XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f)  // フラッシュ中は白
             : XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);  // 通常
+        
+        // ボスはアニメーションフレームを使用
+        ID3D11ShaderResourceView* texToUse = m_texture.Get();
+        if (m_type == EnemyType::Boss && m_animFrames[m_currentFrame]) {
+            texToUse = m_animFrames[m_currentFrame].Get();
+        }
+        
         graphics->DrawTexturedSprite(
-            m_position.x - m_radius, m_position.y - m_radius,
-            size, size, m_texture.Get(), tintColor);
+            m_position.x - m_radius, drawY - m_radius,
+            size, size, texToUse, tintColor);
         
         // 白フラッシュオーバーレイ（被弾時）
         if (m_flashTimer > 0.0f) {

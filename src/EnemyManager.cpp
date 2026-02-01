@@ -39,8 +39,17 @@ void EnemyManager::Initialize(Graphics* graphics, BulletManager* bulletManager) 
         m_bottleTexture.Attach(srv);
     }
     srv = nullptr;
-    if (loader.LoadTexture(basePath + L"boss_kai.png", &srv)) {
+    if (loader.LoadTexture(basePath + L"boss_hinahina.png", &srv)) {
         m_bossTexture.Attach(srv);
+    }
+    // ボスアニメーション用3フレーム読み込み
+    for (int i = 0; i < 3; i++) {
+        srv = nullptr;
+        wchar_t filename[64];
+        swprintf_s(filename, L"boss_frame_%d.png", i + 1);
+        if (loader.LoadTexture(basePath + filename, &srv)) {
+            m_bossFrames[i].Attach(srv);
+        }
     }
     srv = nullptr;
     if (loader.LoadTexture(basePath + L"enemy_glass.png", &srv)) {
@@ -111,6 +120,12 @@ void EnemyManager::SpawnEnemy(float x, float y, float health, int patternId, Ene
             break;
         case EnemyType::Boss:
             if (m_bossTexture) enemy->SetTexture(m_bossTexture.Get());
+            // アニメーションフレームを設定
+            enemy->SetAnimFrames(
+                m_bossFrames[0].Get(),
+                m_bossFrames[1].Get(),
+                m_bossFrames[2].Get()
+            );
             break;
         default:
             break;

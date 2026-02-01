@@ -88,6 +88,7 @@ private:
     int m_bombs;
     int m_power;
     int m_maxPower;
+    int m_killCount = 0;  // 撃破数（10体でボス）
     
     // Graze system
     int m_graze;
@@ -110,8 +111,8 @@ private:
     // Settings menu (ESC to open)
     bool m_isPaused;
     int m_menuSelection;
-    int m_bgmVolume;
-    int m_sfxVolume;
+    int m_bgmVolume = 75;   // デフォルト75%
+    int m_sfxVolume = 100;
     void UpdateSettingsMenu();
     void RenderSettingsMenu();
 

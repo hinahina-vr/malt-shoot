@@ -89,6 +89,7 @@ bool Game::Initialize(HWND hWnd, int width, int height) {
 
     m_bgm = std::make_unique<BGMPlayer>();
     m_bgm->Initialize();
+    m_bgm->SetVolume(m_bgmVolume * 10);  // 75%で初期化
     m_bgm->PlayTitleBGM();  // タイトル画面BGM
 
     // Initialize text renderer with swap chain
@@ -194,7 +195,13 @@ void Game::Update() {
         m_enemyManager->ClearBossWaveStartFlag();
     }
     
-    // ボス登場前：雑魚が全滅してから3秒ディレイ処理
+    // 10体撃破でボス登場
+    if (!m_bossMode && !m_waitingForBoss && m_killCount >= 10) {
+        m_waitingForBoss = true;
+        m_bossSpawnDelay = 0.0f;
+    }
+    
+    // ボス登場前：雑魚が全滅してから2秒ディレイ処理
     if (m_waitingForBoss) {
         // 雑魚敵がまだいる場合は待機
         if (m_enemyManager->HasActiveEnemies()) {
@@ -374,6 +381,7 @@ void Game::CheckCollisions() {
                     );
                     m_items->SpawnDrops(enemy->GetPosition().x, enemy->GetPosition().y, 1);
                     m_score += 500;
+                    m_killCount++;  // 撃破カウント
                     m_sound->PlayEnemyDestroy();  // Play "Eyao!" voice
                 }
                 break;
@@ -887,7 +895,7 @@ void Game::RenderSettingsMenu() {
 }
 
 void Game::UpdateFade() {
-    const float fadeSpeed = 2.0f;  // 0.5秒でフェード完了
+    const float fadeSpeed = 0.5f;  // 2秒でフェード完了
     
     if (m_fadeIn) {
         m_fadeAlpha -= fadeSpeed * m_deltaTime;
@@ -946,6 +954,7 @@ void Game::ResetGame() {
     m_lives = 3;
     m_bombs = 3;
     m_graze = 0;
+    m_killCount = 0;  // 撃破カウントリセット
     m_specialGauge = 0.0f;
     m_bossMode = false;
     m_bossDialogueActive = false;
@@ -1212,6 +1221,10 @@ void Game::UpdateVictoryDialogue() {
     // 5秒間セリフ表示後、StageClearへ
     if (m_victoryDialogueTimer > 5.0f) {
         m_gameState = GameState::StageClear;
+        if (m_bgm) {
+            m_bgm->Stop();
+            m_bgm->PlayScoreBGM();  // スコア画面BGM
+        }
         return;
     }
     
@@ -1222,6 +1235,10 @@ void Game::UpdateVictoryDialogue() {
         
         if (zPressed || enterPressed) {
             m_gameState = GameState::StageClear;
+            if (m_bgm) {
+                m_bgm->Stop();
+                m_bgm->PlayScoreBGM();  // スコア画面BGM
+            }
         }
     }
 }
@@ -1238,20 +1255,16 @@ void Game::RenderVictoryDialogue() {
     m_graphics->DrawSprite(25, windowY + 5, PLAY_AREA_WIDTH - 50, 170,
         DirectX::XMFLOAT4(0.1f, 0.1f, 0.4f, 0.9f));
     
-    // プレイヤーポートレート
-    if (m_portraitHinata) {
-        m_graphics->DrawTexturedSprite(40, windowY + 20, 140, 140, m_portraitHinata.Get());
+    // かいポートレート
+    if (m_portraitKai) {
+        m_graphics->DrawTexturedSprite(40, windowY + 20, 140, 140, m_portraitKai.Get());
     }
     
-    // 勝利セリフ
+    // 勝利セリフ - かい画像とかいのセリフ
     m_text->BeginDraw();
-    const wchar_t* victoryLines[] = {
-        L"やったー！勝ったー！",
-        L"ひなひなの勝利！\nウイスキーの精霊さん、また遊ぼうね！"
-    };
+    const wchar_t* victoryLine = L"かい「ほいじゃ、また見てね」";
     
-    int lineIndex = m_victoryDialogueTimer < 1.5f ? 0 : 1;
-    m_text->DrawText(victoryLines[lineIndex], 200, windowY + 50, 400, 120, 2, 0);
+    m_text->DrawText(victoryLine, 200, windowY + 50, 400, 120, 3, 0);  // サイズ3で大きく
     
     // スキップヒント
     float alpha = (sinf(m_victoryDialogueTimer * 4.0f) + 1.0f) * 0.5f;
@@ -1335,7 +1348,7 @@ void Game::UpdateCutin() {
             int spellIndex = enemy->GetCurrentSpell();
             if (spellIndex >= 0 && spellIndex < 5) {
                 m_currentCutinIndex = spellIndex;
-                m_cutinTimer = 0.5f;  // 0.5秒間表示
+                m_cutinTimer = 1.5f;  // 1.5秒間表示
                 enemy->ClearCutin();  // フラグをクリア
                 
                 // スペルカード切り替え時に敵弾消し
@@ -1363,15 +1376,15 @@ void Game::RenderCutin() {
     if (m_currentCutinIndex < 0 || m_currentCutinIndex >= 5) return;
     if (!m_cutinTextures[m_currentCutinIndex]) return;
     
-    // タイマー進行（0→0.5秒）
-    float t = 0.5f - m_cutinTimer;  // 0→0.5に変換
+    // タイマー進行（0→1.5秒）
+    float t = 1.5f - m_cutinTimer;  // 0→1.5に変換
     
     // フェードイン・アウト計算（透明度80%）
     float alpha = 0.8f;
-    if (t < 0.1f) {
-        alpha = (t / 0.1f) * 0.8f;  // フェードイン
-    } else if (t > 0.4f) {
-        alpha = ((0.5f - t) / 0.1f) * 0.8f;  // フェードアウト
+    if (t < 0.2f) {
+        alpha = (t / 0.2f) * 0.8f;  // フェードイン
+    } else if (t > 1.3f) {
+        alpha = ((1.5f - t) / 0.2f) * 0.8f;  // フェードアウト
     }
     
     // 拡大アニメーション（登場時に大きくなる）
@@ -1402,13 +1415,13 @@ void Game::RenderCutin() {
         m_cutinTextures[m_currentCutinIndex].Get(),
         DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, alpha));
     
-    // キラキラ効果（短時間なので簡略化）
-    if (t > 0.1f && t < 0.4f) {
-        for (int i = 0; i < 2; i++) {
-            float sparkleT = fmodf(t * 10.0f + i * 0.5f, 1.0f);
+    // キラキラ効果（1.5秒版）
+    if (t > 0.2f && t < 1.3f) {
+        for (int i = 0; i < 3; i++) {
+            float sparkleT = fmodf(t * 3.0f + i * 0.5f, 1.0f);
             float sparkleAlpha = sinf(sparkleT * 3.14159f);
-            float sparkleX = fmodf((t * 400.0f + i * 150.0f), static_cast<float>(PLAY_AREA_WIDTH));
-            float sparkleY = fmodf((t * 350.0f + i * 220.0f), static_cast<float>(PLAY_AREA_HEIGHT));
+            float sparkleX = fmodf((t * 200.0f + i * 150.0f), static_cast<float>(PLAY_AREA_WIDTH));
+            float sparkleY = fmodf((t * 180.0f + i * 220.0f), static_cast<float>(PLAY_AREA_HEIGHT));
             
             m_graphics->DrawGlowCircle(sparkleX, sparkleY, 15.0f + sparkleT * 10.0f,
                 DirectX::XMFLOAT4(1.0f, 1.0f, 0.8f, sparkleAlpha * 0.5f), 3);
@@ -1487,21 +1500,27 @@ void Game::RenderBossDialogue() {
     m_graphics->DrawSprite(boxX, boxY + boxH - 3.0f, boxW, 3.0f, 
         DirectX::XMFLOAT4(1.0f, 0.8f, 0.3f, 1.0f));
     
-    // 顔イラスト（左側）- ボスはひなひな
+    // 顔イラスト（左側）- セリフに応じてひなひな/かい切替
     float portraitSize = 180.0f;
-    if (m_portraitHinata) {
+    bool isKaiSpeaking = (m_dialogueLine < g_numDialogues) && 
+        (wcsstr(g_bossDialogues[m_dialogueLine], L"かい「") != nullptr);
+    
+    if (isKaiSpeaking && m_portraitKai) {
+        m_graphics->DrawTexturedSprite(boxX + 20.0f, boxY + 25.0f, portraitSize, portraitSize,
+            m_portraitKai.Get(), DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f));
+    } else if (m_portraitHinata) {
         m_graphics->DrawTexturedSprite(boxX + 20.0f, boxY + 25.0f, portraitSize, portraitSize,
             m_portraitHinata.Get(), DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f));
     }
     
-    // テキスト開始位置を右にずらす
-    float textStartX = boxX + portraitSize + 40.0f;
+    // テキスト開始位置を左寄せに
+    float textStartX = boxX + portraitSize + 30.0f;
     
-    // セリフテキスト - フォント大きく
+    // セリフテキスト - 1.5倍大きく、左寄せ
     if (m_text && m_dialogueLine < g_numDialogues) {
         std::wstring displayText(g_bossDialogues[m_dialogueLine], m_dialogueCharIndex);
         m_text->BeginDraw();
-        m_text->DrawText(displayText.c_str(), textStartX, boxY + 40.0f, boxW - portraitSize - 80.0f, 150.0f, 2, 0);
+        m_text->DrawText(displayText.c_str(), textStartX, boxY + 35.0f, boxW - portraitSize - 60.0f, 160.0f, 3, 0);  // サイズ3で1.5倍
         
         // 次へ進むヒント
         int len = static_cast<int>(wcslen(g_bossDialogues[m_dialogueLine]));

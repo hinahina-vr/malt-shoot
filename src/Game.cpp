@@ -4,9 +4,9 @@
 
 // Play area constants (Full HD - 1920x1080)
 // Vertical smartphone style with sidebar
-constexpr int PLAY_AREA_WIDTH = 608;    // 9:16 ratio vertical style
+constexpr int PLAY_AREA_WIDTH = 1200;   // 横幅倍増！
 constexpr int PLAY_AREA_HEIGHT = 1080;
-constexpr int SIDEBAR_WIDTH = 1312;     // Rest for UI panel
+constexpr int SIDEBAR_WIDTH = 720;      // 残りをUI用に
 
 Game::Game()
     : m_hWnd(nullptr)
@@ -104,7 +104,7 @@ bool Game::Initialize(HWND hWnd, int width, int height) {
     GetModuleFileNameW(nullptr, exePath, MAX_PATH);
     std::wstring path(exePath);
     size_t lastSlash = path.find_last_of(L"\\/");
-    std::wstring texturePath = path.substr(0, lastSlash) + L"\\..\\..\\assets\\textures\\title_screen.png";
+    std::wstring texturePath = path.substr(0, lastSlash) + L"\\..\\..\\assets\\textures\\title_screen.jpg";
     
     ID3D11ShaderResourceView* titleSRV = nullptr;
     if (m_textureLoader->LoadTexture(texturePath, &titleSRV)) {
@@ -113,6 +113,7 @@ bool Game::Initialize(HWND hWnd, int width, int height) {
 
     m_isRunning = true;
     LoadHiScore();
+    LoadCutinTextures();  // カットインテクスチャ読み込み
     return true;
 }
 
@@ -167,6 +168,13 @@ void Game::Update() {
     }
     
     HandleDebugInput();  // B=Boss, R=Reset, P=Power, G=Gauge
+    
+    // ボス会話中はゲームを一時停止
+    if (m_bossDialogueActive) {
+        UpdateBossDialogue();
+        return;  // ゲーム更新をスキップ
+    }
+    
     m_background->Update(m_deltaTime);
     m_player->Update(m_input.get(), m_deltaTime, PLAY_AREA_WIDTH, PLAY_AREA_HEIGHT);
     m_enemyManager->SetPlayerPosition(m_player->GetPosition());
@@ -187,6 +195,12 @@ void Game::Update() {
     
     // Collision detection
     CheckCollisions();
+    
+    // カットイン更新
+    UpdateCutin();
+    
+    // ボス会話更新
+    UpdateBossDialogue();
 
     // Combo timer
     if (m_comboTimer > 0) {
@@ -394,11 +408,17 @@ void Game::Render() {
         }
         
         // Build info
-        m_text->DrawText(L"LoC: 3500+", textX, static_cast<float>(PLAY_AREA_HEIGHT - 60), 200, 20, 0, 2);
-        m_text->DrawText(L"Hinata vs Kai", textX, static_cast<float>(PLAY_AREA_HEIGHT - 35), 200, 20, 0, 1);
+        m_text->DrawText(L"LoC: 3863", textX, static_cast<float>(PLAY_AREA_HEIGHT - 60), 200, 20, 0, 2);
+        m_text->DrawText(L"Hinata vs Hinahina", textX, static_cast<float>(PLAY_AREA_HEIGHT - 35), 200, 20, 0, 1);
         
         m_text->EndDraw();
     }
+    
+    // カットイン描画（UIの上に表示）
+    RenderCutin();
+    
+    // ボス会話描画
+    RenderBossDialogue();
 
     m_graphics->EndFrame();
 }
@@ -505,12 +525,7 @@ void Game::RenderUI() {
         DirectX::XMFLOAT4(0.5f, 0.5f, 0.8f, 0.5f));
     uiY += lineHeight;
 
-    // Combo
-    if (m_combo > 0) {
-        float comboAlpha = fminf(1.0f, m_comboTimer);
-        m_graphics->DrawGlowCircle(uiX + 100, uiY, 20 + m_combo,
-            DirectX::XMFLOAT4(1.0f, 0.8f, 0.2f, comboAlpha), 3);
-    }
+    // Combo (removed growing circle per user request)
     uiY += lineHeight * 2;
     
     // FPS display (bottom of sidebar)
@@ -612,13 +627,17 @@ void Game::SpawnBoss() {
     m_bossMode = true;
     m_bulletManager->Clear();
     m_enemyManager->Clear();  // 雑魚クリア
+    m_enemyManager->ResetWaves();  // ウェーブをリセット
     
     // ボスBGMに切り替え
     m_bgm->Stop();
     m_bgm->PlayBossBGM();
     
-    // Spawn boss enemy at top center (x, y, health=500, pattern=0)
-    m_enemyManager->SpawnEnemy(PLAY_AREA_WIDTH / 2.0f, 150.0f, 500.0f, 0);
+    // 最終ボス「ひなひな」を生成（体力800、4スペルカード完備）
+    m_enemyManager->SpawnEnemy(PLAY_AREA_WIDTH / 2.0f, 150.0f, 800.0f, 0, EnemyType::Boss);
+    
+    // ボス会話開始！
+    StartBossDialogue();
 }
 
 void Game::UpdateSettingsMenu() {
@@ -822,13 +841,13 @@ void Game::RenderTitle() {
         m_text->DrawText(L"< ", centerX - 180.0f, diffY, 30, 40, 2, 1);
         m_text->DrawText(L" >", centerX + 150.0f, diffY, 30, 40, 2, 1);
         
-        // "Press Z to Start" fading text
+        // "Press Z to Start" fading text - centered
         float time = static_cast<float>(GetTickCount64()) * 0.003f;
         float alpha = (sinf(time) + 1.0f) * 0.5f;
         
         std::wstring startText = L"Press Z to Start";
-        float textWidth = 500.0f;
-        float textX = (m_width - textWidth) / 2.0f;
+        float textWidth = static_cast<float>(m_width);  // 画面幅全体
+        float textX = 0.0f;  // 左端から
         float textY = m_height - 180.0f;
         m_text->DrawTextWithAlpha(startText, textX, textY, textWidth, 80, 3, 1, alpha);
         
@@ -1008,5 +1027,168 @@ void Game::LoadHiScore() {
     if (file.is_open()) {
         file.read(reinterpret_cast<char*>(&m_hiScore), sizeof(m_hiScore));
         file.close();
+    }
+}
+
+// カットインテクスチャ読み込み
+void Game::LoadCutinTextures() {
+    wchar_t exePath[MAX_PATH];
+    GetModuleFileNameW(nullptr, exePath, MAX_PATH);
+    std::wstring path(exePath);
+    size_t lastSlash = path.find_last_of(L"\\/");
+    std::wstring basePath = path.substr(0, lastSlash) + L"\\..\\..\\assets\\textures\\";
+    
+    const wchar_t* cutinFiles[] = {
+        L"cutin_spell1.png",
+        L"cutin_spell2.png",
+        L"cutin_spell3.png",
+        L"cutin_spell4.png",
+        L"cutin_spell5.png"
+    };
+    
+    for (int i = 0; i < 5; i++) {
+        std::wstring texturePath = basePath + cutinFiles[i];
+        ID3D11ShaderResourceView* srv = nullptr;
+        if (m_textureLoader->LoadTexture(texturePath, &srv)) {
+            m_cutinTextures[i].Attach(srv);
+        }
+    }
+}
+
+// カットイン更新（毎フレーム呼び出し）
+void Game::UpdateCutin() {
+    // ボスがカットインを表示中か確認
+    for (const auto& enemy : m_enemyManager->GetEnemies()) {
+        if (enemy->IsBoss() && enemy->IsActive() && enemy->IsShowingCutin()) {
+            int spellIndex = enemy->GetCurrentSpell();
+            if (spellIndex >= 0 && spellIndex < 5) {
+                m_currentCutinIndex = spellIndex;
+                m_cutinTimer = 2.0f;  // 2秒間表示
+                enemy->ClearCutin();  // フラグをクリア
+                
+                // スペルカード切り替え時に敵弾消し
+                m_bulletManager->Clear();
+            }
+        }
+    }
+    
+    // タイマー減少
+    if (m_cutinTimer > 0.0f) {
+        m_cutinTimer -= m_deltaTime;
+        if (m_cutinTimer <= 0.0f) {
+            m_currentCutinIndex = -1;  // カットイン終了
+        }
+    }
+}
+
+// カットイン描画
+void Game::RenderCutin() {
+    if (m_currentCutinIndex < 0 || m_currentCutinIndex >= 5) return;
+    if (!m_cutinTextures[m_currentCutinIndex]) return;
+    
+    // フェードイン・アウト計算
+    float alpha = 1.0f;
+    if (m_cutinTimer > 1.8f) {
+        alpha = (2.0f - m_cutinTimer) / 0.2f;  // フェードイン
+    } else if (m_cutinTimer < 0.2f) {
+        alpha = m_cutinTimer / 0.2f;  // フェードアウト
+    }
+    
+    // 画面中央にカットイン表示（プレイエリア内）
+    float cutinWidth = 600.0f;
+    float cutinHeight = 600.0f;
+    float x = (PLAY_AREA_WIDTH - cutinWidth) / 2.0f;
+    float y = (PLAY_AREA_HEIGHT - cutinHeight) / 2.0f;
+    
+    m_graphics->DrawTexturedSprite(x, y, cutinWidth, cutinHeight,
+        m_cutinTextures[m_currentCutinIndex].Get(),
+        DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, alpha));
+}
+
+// Boss dialogue (Hinahina)
+static const wchar_t* g_bossDialogues[] = {
+    L"Hinahina: Ara ara, dare ka kita no?",
+    L"Hinahina: Watashi wa Hinahina... Whisky no Yousei yo!",
+    L"Hinahina: Kono Barrel de anata wo yopparawaseru wa!",
+    L"Hinahina: Saa, hajimemashou ka?",
+    L"Hinahina: Ikuyo!"
+};
+static const int g_numDialogues = 5;
+
+// ボス会話開始
+void Game::StartBossDialogue() {
+    m_bossDialogueActive = true;
+    m_dialogueLine = 0;
+    m_dialogueTimer = 0.0f;
+    m_dialogueCharTimer = 0.0f;
+    m_dialogueCharIndex = 0;
+}
+
+// ボス会話更新
+void Game::UpdateBossDialogue() {
+    if (!m_bossDialogueActive) return;
+    
+    // タイプライター効果
+    m_dialogueCharTimer += m_deltaTime;
+    if (m_dialogueCharTimer >= 0.03f) {  // 1文字0.03秒
+        m_dialogueCharTimer = 0.0f;
+        int len = static_cast<int>(wcslen(g_bossDialogues[m_dialogueLine]));
+        if (m_dialogueCharIndex < len) {
+            m_dialogueCharIndex++;
+        }
+    }
+    
+    // Zキーで次のセリフ（文字が全部出てから）
+    int len = static_cast<int>(wcslen(g_bossDialogues[m_dialogueLine]));
+    if (m_dialogueCharIndex >= len) {
+        static bool zPressed = false;
+        if (m_input->IsKeyDown('Z')) {
+            if (!zPressed) {
+                zPressed = true;
+                m_dialogueLine++;
+                m_dialogueCharIndex = 0;
+                
+                if (m_dialogueLine >= g_numDialogues) {
+                    m_bossDialogueActive = false;
+                }
+            }
+        } else {
+            zPressed = false;
+        }
+    }
+}
+
+// ボス会話描画
+void Game::RenderBossDialogue() {
+    if (!m_bossDialogueActive) return;
+    
+    // 会話ウィンドウ（画面下部）
+    float boxX = 50.0f;
+    float boxY = PLAY_AREA_HEIGHT - 200.0f;
+    float boxW = PLAY_AREA_WIDTH - 100.0f;
+    float boxH = 150.0f;
+    
+    // 半透明背景
+    m_graphics->DrawSprite(boxX, boxY, boxW, boxH, 
+        DirectX::XMFLOAT4(0.0f, 0.0f, 0.1f, 0.85f));
+    
+    // 枠線
+    m_graphics->DrawSprite(boxX, boxY, boxW, 3.0f, 
+        DirectX::XMFLOAT4(1.0f, 0.8f, 0.3f, 1.0f));
+    m_graphics->DrawSprite(boxX, boxY + boxH - 3.0f, boxW, 3.0f, 
+        DirectX::XMFLOAT4(1.0f, 0.8f, 0.3f, 1.0f));
+    
+    // セリフテキスト（タイプライター効果）
+    if (m_text && m_dialogueLine < g_numDialogues) {
+        std::wstring displayText(g_bossDialogues[m_dialogueLine], m_dialogueCharIndex);
+        m_text->BeginDraw();
+        m_text->DrawText(displayText.c_str(), boxX + 20.0f, boxY + 50.0f, boxW - 40.0f, 80.0f, 0, 0);
+        
+        // 次へ進むヒント
+        int len = static_cast<int>(wcslen(g_bossDialogues[m_dialogueLine]));
+        if (m_dialogueCharIndex >= len) {
+            m_text->DrawText(L"Press Z >>", boxX + boxW - 150.0f, boxY + boxH - 35.0f, 130.0f, 25.0f, 0, 2);
+        }
+        m_text->EndDraw();
     }
 }

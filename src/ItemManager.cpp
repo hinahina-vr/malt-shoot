@@ -57,10 +57,8 @@ void ItemManager::Render(Graphics* graphics) {
             if (blink < 0) continue;
         }
 
-        graphics->DrawGlowCircle(item.position.x, item.position.y, item.radius, color, 2);
-
-        XMFLOAT4 coreColor = { 1.0f, 1.0f, 1.0f, 0.8f };
-        graphics->DrawCircle(item.position.x, item.position.y, item.radius * 0.5f, coreColor);
+        // シンプルな塗りつぶし円のみ（グロー削除）
+        graphics->DrawCircle(item.position.x, item.position.y, item.radius, color);
     }
 }
 
@@ -176,13 +174,13 @@ XMFLOAT4 ItemManager::GetItemColor(ItemType type) {
 
 float ItemManager::GetItemRadius(ItemType type) {
     switch (type) {
-        case ItemType::WhiskyShot: return 10.0f;    // ショットグラスサイズ
-        case ItemType::MaltGrain: return 14.0f;     // 大きめ
-        case ItemType::BarrelDrop: return 8.0f;     // 樽のしずく
-        case ItemType::LabelStar: return 12.0f;     // ラベルスター
-        case ItemType::IceCube: return 12.0f;       // 氷
-        case ItemType::GoldenBottle: return 16.0f;  // ボトル（大きい）
-        case ItemType::FullCask: return 18.0f;      // 樽（最大）
-        default: return 8.0f;
+        case ItemType::WhiskyShot: return 24.0f;    // 3x size
+        case ItemType::MaltGrain: return 36.0f;
+        case ItemType::BarrelDrop: return 20.0f;
+        case ItemType::LabelStar: return 30.0f;
+        case ItemType::IceCube: return 30.0f;
+        case ItemType::GoldenBottle: return 40.0f;
+        case ItemType::FullCask: return 48.0f;
+        default: return 20.0f;
     }
 }

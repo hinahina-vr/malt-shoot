@@ -22,6 +22,8 @@ public:
     void SetPosition(float x, float y);
     DirectX::XMFLOAT2 GetPosition() const { return m_position; }
     float GetRadius() const { return m_hitboxRadius; }
+    int GetPower() const { return m_power; }
+    void SetPower(int power) { m_power = power; }
 
 private:
     DirectX::XMFLOAT2 m_position;
@@ -32,6 +34,7 @@ private:
     float m_shootCooldown;
     float m_currentCooldown;
     bool m_isSlow;
+    int m_power = 1;  // パワーレベル（1-4）
 
     BulletManager* m_bulletManager;
     ComPtr<ID3D11ShaderResourceView> m_texture;

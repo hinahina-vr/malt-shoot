@@ -461,3 +461,20 @@ bool Graphics::CreateSamplerState() {
     return SUCCEEDED(hr);
 }
 
+// 円弧描画（HP円グラフ用）- 滑らかな円
+void Graphics::DrawCircleArc(float x, float y, float radius, float thickness, 
+                             float startAngle, float endAngle, XMFLOAT4 color) {
+    const int segments = 64;  // より滑らかに
+    float angleRange = endAngle - startAngle;
+    
+    // 各セグメントを小さな円として描画（滑らかに見える）
+    for (int i = 0; i <= segments; i++) {
+        float t = static_cast<float>(i) / segments;
+        float angle = startAngle + angleRange * t;
+        float arcX = x + cosf(angle) * (radius - thickness / 2);
+        float arcY = y + sinf(angle) * (radius - thickness / 2);
+        
+        // 小さな円として描画
+        DrawGlowCircle(arcX, arcY, thickness / 2, color, 1);
+    }
+}

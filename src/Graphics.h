@@ -33,6 +33,7 @@ public:
     void DrawCircle(float x, float y, float radius, XMFLOAT4 color);
     void DrawGlowCircle(float x, float y, float radius, XMFLOAT4 color, int layers = 3);
     void DrawGradientCircle(float x, float y, float radius, XMFLOAT4 innerColor, XMFLOAT4 outerColor);
+    void DrawCircleArc(float x, float y, float radius, float thickness, float startAngle, float endAngle, XMFLOAT4 color);
     
     // Blend mode
     void SetAdditiveBlend(bool additive);

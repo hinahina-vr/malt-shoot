@@ -43,11 +43,11 @@ public:
         hr = m_d2dFactory->CreateDxgiSurfaceRenderTarget(dxgiSurface.Get(), &props, &m_renderTarget);
         if (FAILED(hr)) return false;
 
-        // Create text formats
-        CreateTextFormat(L"Yu Gothic UI", 14.0f, &m_smallFont);
-        CreateTextFormat(L"Yu Gothic UI", 18.0f, &m_normalFont);
-        CreateTextFormat(L"Yu Gothic UI", 24.0f, &m_largeFont);
-        CreateTextFormat(L"Yu Gothic UI", 54.0f, &m_titleFont);
+        // Create text formats (日本語対応フォント)
+        CreateTextFormat(L"Meiryo UI", 14.0f, &m_smallFont);
+        CreateTextFormat(L"Meiryo UI", 18.0f, &m_normalFont);
+        CreateTextFormat(L"Meiryo UI", 24.0f, &m_largeFont);
+        CreateTextFormat(L"Meiryo UI", 54.0f, &m_titleFont);
 
         // Create brushes
         m_renderTarget->CreateSolidColorBrush(D2D1::ColorF(D2D1::ColorF::White), &m_whiteBrush);
@@ -148,13 +148,18 @@ public:
 
 private:
     bool CreateTextFormat(const wchar_t* fontName, float size, IDWriteTextFormat** format) {
-        return SUCCEEDED(m_dwriteFactory->CreateTextFormat(
+        HRESULT hr = m_dwriteFactory->CreateTextFormat(
             fontName, nullptr,
             DWRITE_FONT_WEIGHT_NORMAL,
             DWRITE_FONT_STYLE_NORMAL,
             DWRITE_FONT_STRETCH_NORMAL,
             size, L"ja-JP", format
-        ));
+        );
+        if (SUCCEEDED(hr) && *format) {
+            (*format)->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_CENTER);
+            (*format)->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_CENTER);
+        }
+        return SUCCEEDED(hr);
     }
 
     bool m_initialized;

@@ -73,10 +73,15 @@ void Player::Update(Input* input, float deltaTime, int screenWidth, int screenHe
     // 射撃
     m_currentCooldown -= deltaTime;
     if (input->IsKeyDown('Z') && m_currentCooldown <= 0.0f) {
-        // 自機弾を発射
+        // 自機弾を発射（弾速2倍！）- 中央から1発
         if (m_bulletManager) {
-            m_bulletManager->SpawnPlayerBullet(m_position.x - 10.0f, m_position.y - 20.0f, 0.0f, -800.0f);
-            m_bulletManager->SpawnPlayerBullet(m_position.x + 10.0f, m_position.y - 20.0f, 0.0f, -800.0f);
+            m_bulletManager->SpawnPlayerBullet(m_position.x, m_position.y - 20.0f, 0.0f, -1600.0f);
+            
+            // パワーアップでホーミングミサイル（パワー2以上で発射）
+            if (m_power >= 2) {
+                m_bulletManager->SpawnHomingMissile(m_position.x - 25.0f, m_position.y, -50.0f, -400.0f);
+                m_bulletManager->SpawnHomingMissile(m_position.x + 25.0f, m_position.y, 50.0f, -400.0f);
+            }
         }
         m_currentCooldown = m_shootCooldown;
     }

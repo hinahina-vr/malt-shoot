@@ -138,4 +138,23 @@ private:
     // ボススペルカード表示用
     std::wstring m_currentBossSpellName;
     int m_bossRemainingSpells = 0;
+    
+    // カットインシステム
+    ComPtr<ID3D11ShaderResourceView> m_cutinTextures[5];  // 5枚のカットイン
+    float m_cutinTimer = 0.0f;
+    int m_currentCutinIndex = -1;  // -1 = 非表示
+    void LoadCutinTextures();
+    void UpdateCutin();
+    void RenderCutin();
+    
+    // ボス会話システム
+    bool m_bossDialogueActive = false;
+    int m_dialogueLine = 0;
+    float m_dialogueTimer = 0.0f;
+    float m_dialogueCharTimer = 0.0f;  // タイプライター効果
+    int m_dialogueCharIndex = 0;
+    bool m_bossSpawned = false;
+    void StartBossDialogue();
+    void UpdateBossDialogue();
+    void RenderBossDialogue();
 };

@@ -1,5 +1,6 @@
 #include "BulletManager.h"
 #include "Graphics.h"
+#include "TextureLoader.h"
 #include <cmath>
 
 using namespace DirectX;
@@ -14,6 +15,21 @@ BulletManager::~BulletManager() {
 
 void BulletManager::Initialize(Graphics* graphics) {
     m_bullets.reserve(MAX_BULLETS);
+    
+    // 樽テクスチャを読み込み
+    TextureLoader loader;
+    loader.Initialize(graphics->GetDevice());
+    
+    wchar_t exePath[MAX_PATH];
+    GetModuleFileNameW(nullptr, exePath, MAX_PATH);
+    std::wstring path(exePath);
+    size_t lastSlash = path.find_last_of(L"\\/");
+    std::wstring texturePath = path.substr(0, lastSlash) + L"\\..\\..\\assets\\textures\\barrel_bullet.png";
+    
+    ID3D11ShaderResourceView* srv = nullptr;
+    if (loader.LoadTexture(texturePath, &srv)) {
+        m_barrelTexture.Attach(srv);
+    }
 }
 
 void BulletManager::Update(float deltaTime, int screenWidth, int screenHeight) {
@@ -42,27 +58,32 @@ void BulletManager::Update(float deltaTime, int screenWidth, int screenHeight) {
 }
 
 void BulletManager::Render(Graphics* graphics) {
-    for (const auto& bullet : m_bullets) {
+    static float globalTime = 0.0f;
+    globalTime += 0.016f;  // 約60FPSで回転
+    
+    for (size_t i = 0; i < m_bullets.size(); i++) {
+        const auto& bullet = m_bullets[i];
         if (!bullet.isActive) continue;
 
         if (bullet.isPlayerBullet) {
-            // Player bullets: bright glow
-            graphics->DrawGlowCircle(
-                bullet.position.x,
-                bullet.position.y,
-                bullet.radius,
-                bullet.color,
-                2
-            );
+            // プレイヤー弾：樽！
+            if (m_barrelTexture) {
+                float size = bullet.radius * 8.0f;  // 樽サイズ（倍増！）
+                graphics->DrawTexturedSprite(
+                    bullet.position.x - size/2, bullet.position.y - size/2,
+                    size, size,
+                    m_barrelTexture.Get(), XMFLOAT4(1, 1, 1, 1));
+            } else {
+                // フォールバック
+                graphics->DrawGlowCircle(
+                    bullet.position.x, bullet.position.y,
+                    bullet.radius, bullet.color, 2);
+            }
         } else {
             // Enemy bullets: beautiful glow effect
             graphics->DrawGlowCircle(
-                bullet.position.x,
-                bullet.position.y,
-                bullet.radius,
-                bullet.color,
-                3
-            );
+                bullet.position.x, bullet.position.y,
+                bullet.radius, bullet.color, 3);
         }
     }
 }
@@ -99,6 +120,38 @@ void BulletManager::SpawnPlayerBullet(float x, float y, float vx, float vy) {
         bullet.type = BulletType::PlayerShot;
         bullet.isActive = true;
         bullet.isPlayerBullet = true;
+        m_bullets.push_back(bullet);
+    }
+}
+
+void BulletManager::SpawnHomingMissile(float x, float y, float vx, float vy) {
+    for (auto& bullet : m_bullets) {
+        if (!bullet.isActive) {
+            bullet.position = { x, y };
+            bullet.velocity = { vx, vy };
+            bullet.color = { 0.4f, 1.0f, 0.5f, 1.0f }; // 緑色のミサイル
+            bullet.radius = 8.0f;  // 大きめ
+            bullet.angle = atan2f(vy, vx);
+            bullet.angularVelocity = 0.0f;
+            bullet.type = BulletType::PlayerShot;
+            bullet.isActive = true;
+            bullet.isPlayerBullet = true;
+            bullet.isHoming = true;  // ホーミングフラグ
+            return;
+        }
+    }
+
+    if (m_bullets.size() < MAX_BULLETS) {
+        Bullet bullet;
+        bullet.position = { x, y };
+        bullet.velocity = { vx, vy };
+        bullet.color = { 0.4f, 1.0f, 0.5f, 1.0f };
+        bullet.radius = 8.0f;
+        bullet.angle = atan2f(vy, vx);
+        bullet.type = BulletType::PlayerShot;
+        bullet.isActive = true;
+        bullet.isPlayerBullet = true;
+        bullet.isHoming = true;
         m_bullets.push_back(bullet);
     }
 }

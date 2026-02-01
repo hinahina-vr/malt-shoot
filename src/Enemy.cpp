@@ -51,6 +51,14 @@ void Enemy::SetTexture(ID3D11ShaderResourceView* texture) {
 }
 
 void Enemy::Update(float deltaTime, int screenWidth, int screenHeight, BulletManager* bulletManager, XMFLOAT2 playerPos) {
+    // 無敵時間のカウントダウン
+    if (m_invincibleTimer > 0) {
+        m_invincibleTimer -= deltaTime;
+        if (m_invincibleTimer <= 0) {
+            m_showingCutin = false;  // カットイン終了
+        }
+    }
+    
     switch (m_state) {
         case EnemyState::Entering: {
             float dx = m_targetPosition.x - m_position.x;
@@ -126,22 +134,28 @@ void Enemy::Render(Graphics* graphics) {
         graphics->DrawCircle(m_position.x, m_position.y, m_radius, glowColor);
     }
 
-    // HP bar
-    float barWidth = m_radius * 2.5f;
-    float barHeight = 5.0f;
+    // HP円グラフ（敵の周りを囲む）
     float hpRatio = m_health / m_maxHealth;
+    float arcRadius = m_radius + 10.0f;  // 敵の少し外側
+    float thickness = m_type == EnemyType::Boss ? 6.0f : 4.0f;
     
-    graphics->DrawSprite(m_position.x - barWidth / 2.0f, m_position.y - m_radius - 12.0f,
-        barWidth, barHeight, XMFLOAT4(0.2f, 0.1f, 0.2f, 0.9f));
+    // 背景（薄いグレー）
+    graphics->DrawCircleArc(m_position.x, m_position.y, arcRadius, thickness,
+        -PI / 2.0f, 3.0f * PI / 2.0f, XMFLOAT4(0.2f, 0.2f, 0.2f, 0.5f));
     
+    // HP表示（緑→赤のグラデーション）
     XMFLOAT4 hpColor = hpRatio > 0.5f 
         ? XMFLOAT4(0.2f, 0.9f, 0.4f, 1.0f)
         : XMFLOAT4(0.9f, 0.3f, 0.2f, 1.0f);
-    graphics->DrawSprite(m_position.x - barWidth / 2.0f, m_position.y - m_radius - 12.0f,
-        barWidth * hpRatio, barHeight, hpColor);
+    float endAngle = -PI / 2.0f + hpRatio * 2.0f * PI;  // 上から時計回り
+    graphics->DrawCircleArc(m_position.x, m_position.y, arcRadius, thickness,
+        -PI / 2.0f, endAngle, hpColor);
 }
 
 void Enemy::TakeDamage(float damage) {
+    // 無敵時間中はダメージを受けない
+    if (m_invincibleTimer > 0) return;
+    
     m_health -= damage;
     if (m_health <= 0) {
         // ボスはスペルカードが残っていれば復活
@@ -152,6 +166,9 @@ void Enemy::TakeDamage(float damage) {
             m_shootTimer = 0.0f;
             // 次のパターンに切り替え（currentSpellに応じて）
             m_patternId = m_currentSpell;
+            // 無敵時間とカットイン
+            m_invincibleTimer = 2.0f;  // 2秒間無敵
+            m_showingCutin = true;     // カットイン表示
         } else {
             m_health = 0;
             m_state = EnemyState::Dead;

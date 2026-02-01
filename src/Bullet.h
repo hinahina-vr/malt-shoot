@@ -20,6 +20,7 @@ struct Bullet {
     BulletType type;
     bool isActive;
     bool isPlayerBullet;
+    bool isHoming;  // ホーミングミサイル
 
     Bullet()
         : position{ 0.0f, 0.0f }
@@ -31,5 +32,6 @@ struct Bullet {
         , type(BulletType::EnemySmall)
         , isActive(false)
         , isPlayerBullet(false)
+        , isHoming(false)
     {}
 };

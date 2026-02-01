@@ -54,14 +54,17 @@ public:
     int GetCurrentSpell() const { return m_currentSpell; }
     bool HasSpellsRemaining() const { return m_currentSpell < m_spellCards; }
     int GetRemainingSpells() const { return m_spellCards - m_currentSpell - 1; }
+    bool IsInvincible() const { return m_invincibleTimer > 0; }
+    bool IsShowingCutin() const { return m_showingCutin; }
+    void ClearCutin() { m_showingCutin = false; }
     
-    // スペルカード名（ウイスキーテーマ）
+    // スペルカード名（ウイスキーテーマ）- 日本語はGame.cppで設定
     const wchar_t* GetSpellCardName() const {
         static const wchar_t* names[] = {
-            L"Amber Sign \"Kohaku no Tsuioku\"",       // 琥珀の追憶
-            L"Aged Sign \"12 Years of Radiance\"",     // 熟成12年の輝き
-            L"Cask Spirit \"Barrel Dance\"",           // 樽の精霊舞踏
-            L"Final Drop \"The Last Dram\""            // 最後の一滴
+            L"Kohaku - Amber Memory",
+            L"Jukusei - 12 Years",
+            L"Tarurei - Barrel Dance",
+            L"Shuen - Last Drop"
         };
         if (m_currentSpell >= 0 && m_currentSpell < 4) {
             return names[m_currentSpell];
@@ -89,4 +92,6 @@ private:
     // ボススペルカード
     int m_spellCards = 4;   // 復活回数（4つのスペル）
     int m_currentSpell = 0; // 現在のスペル番号
+    float m_invincibleTimer = 0.0f;  // 無敵時間
+    bool m_showingCutin = false;     // カットイン表示中
 };

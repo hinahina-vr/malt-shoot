@@ -1,6 +1,8 @@
 #pragma once
 
 #include <vector>
+#include <d3d11.h>
+#include <wrl/client.h>
 #include "Bullet.h"
 
 class Graphics;
@@ -17,6 +19,7 @@ public:
 
     // Bullet spawn
     void SpawnPlayerBullet(float x, float y, float vx, float vy);
+    void SpawnHomingMissile(float x, float y, float vx, float vy);  // ホーミングミサイル
     void SpawnEnemyBullet(float x, float y, float vx, float vy, BulletType type, DirectX::XMFLOAT4 color);
     
     // Basic patterns
@@ -37,4 +40,7 @@ public:
 private:
     std::vector<Bullet> m_bullets;
     static const int MAX_BULLETS = 2000;
+    
+    // 樽テクスチャ
+    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_barrelTexture;
 };

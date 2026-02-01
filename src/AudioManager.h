@@ -50,9 +50,9 @@ public:
         m_soundPath = exePath.substr(0, lastSlash) + L"\\..\\..\\assets\\sounds\\";
 
         // 音声ファイルをプリロード（WAVとMP3両対応）
-        LoadAudio(L"shot", m_soundPath + L"shot.mp3");
-        LoadAudio(L"hit", m_soundPath + L"hina_eyao.wav");
-        LoadAudio(L"destroy", m_soundPath + L"hina_eyao.wav");
+        LoadAudio(L"shot", m_soundPath + L"player_shot.mp3");
+        LoadAudio(L"hit", m_soundPath + L"enemy_hit.mp3");
+        LoadAudio(L"destroy", m_soundPath + L"enemy_die.wav");
         LoadAudio(L"player_hit", m_soundPath + L"hina_buoo.wav");
         LoadAudio(L"bomb", m_soundPath + L"bomb.mp3");
         LoadAudio(L"cursor", m_soundPath + L"cursor.mp3");

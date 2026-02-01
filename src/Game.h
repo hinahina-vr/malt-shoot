@@ -14,12 +14,20 @@
 #include "BGMPlayer.h"
 #include "TextRenderer.h"
 #include "TextureLoader.h"
+#include "ReplaySystem.h"
 
 enum class GameState {
     Title,
     Playing,
     Paused,
-    GameOver
+    GameOver,
+    StageClear
+};
+
+enum class Difficulty {
+    Easy,
+    Normal,
+    Hard
 };
 
 class Game {
@@ -104,4 +112,26 @@ private:
     ComPtr<ID3D11ShaderResourceView> m_titleTexture;
     void UpdateTitle();
     void RenderTitle();
+    
+    // Difficulty
+    Difficulty m_difficulty;
+    int m_titleSelection;  // 0=Easy, 1=Normal, 2=Hard
+    float GetBulletSpeedMultiplier() const;
+    float GetEnemyBulletCountMultiplier() const;
+    
+    // Game Over / Stage Clear screens
+    int m_gameOverSelection;  // 0=Continue, 1=Title
+    int m_continueCount;
+    void UpdateGameOver();
+    void RenderGameOver();
+    void UpdateStageClear();
+    void RenderStageClear();
+    void ResetGame();
+    
+    // ハイスコア保存
+    void SaveHiScore();
+    void LoadHiScore();
+    
+    // リプレイシステム
+    std::unique_ptr<ReplaySystem> m_replay;
 };

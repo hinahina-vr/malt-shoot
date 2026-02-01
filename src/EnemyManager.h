@@ -26,6 +26,10 @@ public:
 
     void SetPlayerPosition(DirectX::XMFLOAT2 pos) { m_playerPos = pos; }
     const std::vector<std::unique_ptr<Enemy>>& GetEnemies() const { return m_enemies; }
+    int GetCurrentWave() const { return m_currentWave; }
+    bool IsBossWave() const { return (m_currentWave % 4) == 3; }
+    bool AllEnemiesDead() const;
+    void ResetWaves() { m_currentWave = 0; m_waveTimer = 0.0f; }
 
 private:
     std::vector<std::unique_ptr<Enemy>> m_enemies;

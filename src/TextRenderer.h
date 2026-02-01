@@ -47,7 +47,7 @@ public:
         CreateTextFormat(L"Yu Gothic UI", 14.0f, &m_smallFont);
         CreateTextFormat(L"Yu Gothic UI", 18.0f, &m_normalFont);
         CreateTextFormat(L"Yu Gothic UI", 24.0f, &m_largeFont);
-        CreateTextFormat(L"Yu Gothic UI", 36.0f, &m_titleFont);
+        CreateTextFormat(L"Yu Gothic UI", 54.0f, &m_titleFont);
 
         // Create brushes
         m_renderTarget->CreateSolidColorBrush(D2D1::ColorF(D2D1::ColorF::White), &m_whiteBrush);

@@ -41,9 +41,18 @@ public:
     float GetRadius() const { return m_radius; }
     EnemyState GetState() const { return m_state; }
     EnemyType GetType() const { return m_type; }
+    float GetHealth() const { return m_health; }
+    float GetMaxHealth() const { return m_maxHealth; }
+    float GetHealthPercent() const { return m_maxHealth > 0 ? m_health / m_maxHealth : 0; }
+    bool IsBoss() const { return m_type == EnemyType::Boss; }
 
     // 弾幕パターンの設定
     void SetBulletPattern(int patternId) { m_patternId = patternId; }
+    
+    // ボススペルカード（復活システム）
+    int GetSpellCards() const { return m_spellCards; }
+    int GetCurrentSpell() const { return m_currentSpell; }
+    bool HasSpellsRemaining() const { return m_currentSpell < m_spellCards; }
 
 private:
     void ExecuteBulletPattern(BulletManager* bulletManager, DirectX::XMFLOAT2 playerPos);
@@ -61,4 +70,8 @@ private:
     EnemyState m_state;
     EnemyType m_type;
     ComPtr<ID3D11ShaderResourceView> m_texture;
+    
+    // ボススペルカード
+    int m_spellCards = 4;   // 復活回数（4つのスペル）
+    int m_currentSpell = 0; // 現在のスペル番号
 };

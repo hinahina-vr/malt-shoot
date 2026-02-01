@@ -50,7 +50,7 @@ bool Graphics::CreateDevice(HWND hWnd, int width, int height) {
     scd.SampleDesc.Quality = 0;
     scd.Windowed = TRUE;
 
-    UINT createDeviceFlags = 0;
+    UINT createDeviceFlags = D3D11_CREATE_DEVICE_BGRA_SUPPORT;
 #ifdef _DEBUG
     createDeviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
 #endif
@@ -339,20 +339,33 @@ void Graphics::DrawCircle(float x, float y, float radius, XMFLOAT4 color) {
 }
 
 void Graphics::DrawGlowCircle(float x, float y, float radius, XMFLOAT4 color, int layers) {
-    // Draw glow layers (outer to inner) with additive blending
+    // Enhanced glow effect with HDR-like bloom
     SetAdditiveBlend(true);
     
-    for (int i = layers; i >= 1; i--) {
-        float layerRadius = radius * (1.0f + i * 0.5f);
-        float alpha = color.w / (i * 2.0f);
-        XMFLOAT4 glowColor = { color.x * 0.5f, color.y * 0.5f, color.z * 0.5f, alpha };
+    // Outer glow layers (soft, diffuse light)
+    for (int i = layers + 2; i >= 1; i--) {
+        float layerRadius = radius * (1.0f + i * 0.6f);
+        float alpha = color.w * 0.15f / (i * 0.8f);
+        XMFLOAT4 glowColor = { color.x * 0.7f, color.y * 0.7f, color.z * 0.7f, alpha };
         DrawGradientCircle(x, y, layerRadius, glowColor, XMFLOAT4(0, 0, 0, 0));
     }
     
+    // Inner bright glow (HDR-like intensity)
+    DrawGradientCircle(x, y, radius * 1.3f, 
+        XMFLOAT4(color.x * 0.9f, color.y * 0.9f, color.z * 0.9f, color.w * 0.4f),
+        XMFLOAT4(0, 0, 0, 0));
+    
     SetAdditiveBlend(false);
     
-    // Draw solid core
-    DrawGradientCircle(x, y, radius, color, XMFLOAT4(color.x * 0.5f, color.y * 0.5f, color.z * 0.5f, color.w));
+    // Bright solid core with white center
+    XMFLOAT4 coreColor = { 
+        fminf(color.x + 0.3f, 1.0f), 
+        fminf(color.y + 0.3f, 1.0f), 
+        fminf(color.z + 0.3f, 1.0f), 
+        color.w 
+    };
+    DrawGradientCircle(x, y, radius, coreColor, 
+        XMFLOAT4(color.x * 0.6f, color.y * 0.6f, color.z * 0.6f, color.w));
 }
 
 void Graphics::DrawGradientCircle(float x, float y, float radius, XMFLOAT4 innerColor, XMFLOAT4 outerColor) {

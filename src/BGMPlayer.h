@@ -55,8 +55,8 @@ private:
         MCIERROR err = mciSendStringW(openCmd.c_str(), nullptr, 0, nullptr);
         if (err != 0) return;
         
-        // Set volume to 10%
-        mciSendStringW(L"setaudio bgm volume to 100", nullptr, 0, nullptr);
+        // Set volume to 5%
+        mciSendStringW(L"setaudio bgm volume to 50", nullptr, 0, nullptr);
         
         // Play with repeat
         mciSendStringW(L"play bgm repeat", nullptr, 0, nullptr);

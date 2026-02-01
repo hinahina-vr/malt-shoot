@@ -70,6 +70,16 @@ void Enemy::Update(float deltaTime, int screenWidth, int screenHeight, BulletMan
         case EnemyState::Active: {
             m_shootTimer += deltaTime;
             m_patternTimer += deltaTime;
+            
+            // ボスはHP%に応じてパターン自動切り替え（スペルカード風）
+            if (m_type == EnemyType::Boss) {
+                float hpPercent = m_health / m_maxHealth;
+                if (hpPercent > 0.75f) m_patternId = 0;       // Phase 1: Flower
+                else if (hpPercent > 0.50f) m_patternId = 4;  // Phase 2: Rainbow Spiral
+                else if (hpPercent > 0.25f) m_patternId = 2;  // Phase 3: Wave + Aimed
+                else m_patternId = 3;                          // Phase 4: Double Ring
+            }
+            
             ExecuteBulletPattern(bulletManager, playerPos);
             break;
         }
@@ -134,8 +144,18 @@ void Enemy::Render(Graphics* graphics) {
 void Enemy::TakeDamage(float damage) {
     m_health -= damage;
     if (m_health <= 0) {
-        m_health = 0;
-        m_state = EnemyState::Dead;
+        // ボスはスペルカードが残っていれば復活
+        if (m_type == EnemyType::Boss && m_currentSpell < m_spellCards - 1) {
+            m_currentSpell++;
+            m_health = m_maxHealth;  // HP全回復
+            m_patternTimer = 0.0f;   // パターンリセット
+            m_shootTimer = 0.0f;
+            // 次のパターンに切り替え（currentSpellに応じて）
+            m_patternId = m_currentSpell;
+        } else {
+            m_health = 0;
+            m_state = EnemyState::Dead;
+        }
     }
 }
 

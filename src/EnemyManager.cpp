@@ -67,9 +67,12 @@ void EnemyManager::Update(float deltaTime, int screenWidth, int screenHeight) {
     }
 
     if (allDead && m_waveTimer > 2.0f) {
-        m_currentWave++;
-        SpawnWave(m_currentWave);
-        m_waveTimer = 0.0f;
+        // ボスウェーブ時は自動進行しない（Game側でクリア判定）
+        if ((m_currentWave % 4) != 3) {
+            m_currentWave++;
+            SpawnWave(m_currentWave);
+            m_waveTimer = 0.0f;
+        }
     }
 }
 
@@ -135,5 +138,14 @@ void EnemyManager::SpawnWave(int waveNumber) {
 
 void EnemyManager::Clear() {
     m_enemies.clear();
+}
+
+bool EnemyManager::AllEnemiesDead() const {
+    for (const auto& enemy : m_enemies) {
+        if (enemy->IsActive()) {
+            return false;
+        }
+    }
+    return !m_enemies.empty();
 }
 

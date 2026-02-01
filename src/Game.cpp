@@ -1,5 +1,6 @@
 #include "Game.h"
 #include <cmath>
+#include <fstream>
 
 // Play area constants (Full HD - 1920x1080)
 // Vertical smartphone style with sidebar
@@ -35,6 +36,10 @@ Game::Game()
     , m_bgmVolume(10)
     , m_sfxVolume(100)
     , m_gameState(GameState::Title)
+    , m_difficulty(Difficulty::Normal)
+    , m_titleSelection(1)
+    , m_gameOverSelection(0)
+    , m_continueCount(3)
 {
 }
 
@@ -107,10 +112,12 @@ bool Game::Initialize(HWND hWnd, int width, int height) {
     }
 
     m_isRunning = true;
+    LoadHiScore();
     return true;
 }
 
 void Game::Shutdown() {
+    SaveHiScore();
     if (m_items) m_items.reset();
     if (m_particles) m_particles.reset();
     if (m_background) m_background.reset();
@@ -140,6 +147,10 @@ void Game::Update() {
             UpdateSettingsMenu();
             return;
         case GameState::GameOver:
+            UpdateGameOver();
+            return;
+        case GameState::StageClear:
+            UpdateStageClear();
             return;
     }
     
@@ -160,6 +171,13 @@ void Game::Update() {
     m_player->Update(m_input.get(), m_deltaTime, PLAY_AREA_WIDTH, PLAY_AREA_HEIGHT);
     m_enemyManager->SetPlayerPosition(m_player->GetPosition());
     m_enemyManager->Update(m_deltaTime, PLAY_AREA_WIDTH, PLAY_AREA_HEIGHT);
+    
+    // ボス撃破時→ステージクリア
+    if (m_enemyManager->IsBossWave() && m_enemyManager->AllEnemiesDead()) {
+        if (m_score > m_hiScore) m_hiScore = m_score;
+        m_gameState = GameState::StageClear;
+    }
+    
     m_bulletManager->Update(m_deltaTime, PLAY_AREA_WIDTH, PLAY_AREA_HEIGHT);
     m_particles->Update(m_deltaTime);
     m_items->Update(m_deltaTime, m_player->GetPosition(), PLAY_AREA_WIDTH, PLAY_AREA_HEIGHT);
@@ -302,6 +320,27 @@ void Game::Render() {
         m_graphics->EndFrame();
         return;
     }
+    
+    // Render game over screen
+    if (m_gameState == GameState::GameOver) {
+        RenderGameOver();
+        m_graphics->EndFrame();
+        return;
+    }
+    
+    // Render stage clear screen
+    if (m_gameState == GameState::StageClear) {
+        RenderStageClear();
+        m_graphics->EndFrame();
+        return;
+    }
+    
+    // Render paused/settings menu
+    if (m_gameState == GameState::Paused) {
+        RenderSettingsMenu();
+        m_graphics->EndFrame();
+        return;
+    }
 
     // Play area background
     m_graphics->DrawSprite(0, 0, PLAY_AREA_WIDTH, PLAY_AREA_HEIGHT,
@@ -327,18 +366,21 @@ void Game::Render() {
         RenderSettingsMenu();
     }
 
+    // Flush D3D before D2D text rendering
+    m_graphics->GetContext()->Flush();
+
     // D2D text rendering (after D3D, before EndFrame)
     if (m_text) {
         m_text->BeginDraw();
         
         // UI Text labels
         float textX = static_cast<float>(PLAY_AREA_WIDTH + 20);
-        m_text->DrawTextWithValue(L"HI-SCORE", m_hiScore, textX, 50);
-        m_text->DrawTextWithValue(L"SCORE", m_score, textX, 90);
-        m_text->DrawTextWithValue(L"LIVES", m_lives, textX, 170);
-        m_text->DrawTextWithValue(L"BOMBS", m_bombs, textX, 210);
-        m_text->DrawTextWithValue(L"POWER", m_power, textX, 250);
-        m_text->DrawTextWithValue(L"GRAZE", m_graze, textX, 330);
+        m_text->DrawTextWithValue(L"Hi-Score", m_hiScore, textX, 50);
+        m_text->DrawTextWithValue(L"Score", m_score, textX, 90);
+        m_text->DrawTextWithValue(L"Lives", m_lives, textX, 170);
+        m_text->DrawTextWithValue(L"Bombs", m_bombs, textX, 210);
+        m_text->DrawTextWithValue(L"Power", m_power, textX, 250);
+        m_text->DrawTextWithValue(L"Graze", m_graze, textX, 330);
         
         // FPS display
         wchar_t fpsBuffer[32];
@@ -346,8 +388,8 @@ void Game::Render() {
         m_text->DrawText(fpsBuffer, textX, 410, 200, 30, 1, m_currentFPS >= 60 ? 0 : 1);
         
         // Build info
-        m_text->DrawText(L"LoC: 2700+", textX, static_cast<float>(PLAY_AREA_HEIGHT - 60), 200, 20, 0, 2);
-        m_text->DrawText(L"ひなひな vs かい", textX, static_cast<float>(PLAY_AREA_HEIGHT - 35), 200, 20, 0, 1);
+        m_text->DrawText(L"LoC: 3300+", textX, static_cast<float>(PLAY_AREA_HEIGHT - 60), 200, 20, 0, 2);
+        m_text->DrawText(L"Hinata vs Kai", textX, static_cast<float>(PLAY_AREA_HEIGHT - 35), 200, 20, 0, 1);
         
         m_text->EndDraw();
     }
@@ -359,6 +401,30 @@ void Game::RenderUI() {
     int uiX = PLAY_AREA_WIDTH + 20;
     int uiY = 50;
     int lineHeight = 40;
+    
+    // ボス体力バー（プレイエリア上部に表示）
+    for (const auto& enemy : m_enemyManager->GetEnemies()) {
+        if (enemy->IsBoss() && enemy->IsActive()) {
+            float barX = 20.0f;
+            float barY = 20.0f;
+            float barWidth = PLAY_AREA_WIDTH - 40.0f;
+            float barHeight = 16.0f;
+            float healthPercent = enemy->GetHealthPercent();
+            
+            // 背景
+            m_graphics->DrawSprite(barX, barY, barWidth, barHeight,
+                DirectX::XMFLOAT4(0.2f, 0.1f, 0.1f, 0.8f));
+            // 体力バー
+            m_graphics->DrawSprite(barX, barY, barWidth * healthPercent, barHeight,
+                DirectX::XMFLOAT4(0.9f, 0.2f, 0.2f, 1.0f));
+            // 枠
+            m_graphics->DrawSprite(barX - 2, barY - 2, barWidth + 4, 2,
+                DirectX::XMFLOAT4(1.0f, 0.9f, 0.3f, 1.0f));
+            m_graphics->DrawSprite(barX - 2, barY + barHeight, barWidth + 4, 2,
+                DirectX::XMFLOAT4(1.0f, 0.9f, 0.3f, 1.0f));
+            break;
+        }
+    }
 
     // Sidebar background
     m_graphics->DrawSprite(PLAY_AREA_WIDTH, 0, SIDEBAR_WIDTH, PLAY_AREA_HEIGHT,
@@ -469,46 +535,77 @@ void Game::UpdateDeltaTime() {
 }
 
 void Game::HandleDebugInput() {
+    static bool bPressed = false, rPressed = false, pPressed = false, gPressed = false;
+    
     // Press B to spawn boss
-    if (GetAsyncKeyState('B') & 0x0001) {
-        SpawnBoss();
-    }
+    if (GetAsyncKeyState('B') & 0x8000) {
+        if (!bPressed) {
+            SpawnBoss();
+        }
+        bPressed = true;
+    } else { bPressed = false; }
+    
     // Press R to reset game
-    if (GetAsyncKeyState('R') & 0x0001) {
-        m_score = 0;
-        m_lives = 3;
-        m_bombs = 3;
-        m_power = 0;
-        m_specialGauge = 0;
-        m_combo = 0;
-        m_graze = 0;
-        m_bulletManager->Clear();
-        m_items->Clear();
-        m_bossMode = false;
-    }
+    if (GetAsyncKeyState('R') & 0x8000) {
+        if (!rPressed) {
+            m_score = 0;
+            m_lives = 3;
+            m_bombs = 3;
+            m_power = 0;
+            m_specialGauge = 0;
+            m_combo = 0;
+            m_graze = 0;
+            m_bulletManager->Clear();
+            m_items->Clear();
+            m_bossMode = false;
+        }
+        rPressed = true;
+    } else { rPressed = false; }
+    
     // Press P for full power
-    if (GetAsyncKeyState('P') & 0x0001) {
-        m_power = m_maxPower;
-    }
+    if (GetAsyncKeyState('P') & 0x8000) {
+        if (!pPressed) {
+            m_power = m_maxPower;
+        }
+        pPressed = true;
+    } else { pPressed = false; }
+    
     // Press G to fill special gauge
-    if (GetAsyncKeyState('G') & 0x0001) {
-        m_specialGauge = m_maxSpecialGauge;
-        m_specialReady = true;
-    }
+    if (GetAsyncKeyState('G') & 0x8000) {
+        if (!gPressed) {
+            m_specialGauge = m_maxSpecialGauge;
+            m_specialReady = true;
+        }
+        gPressed = true;
+    } else { gPressed = false; }
 }
 
 void Game::SpawnBoss() {
     m_bossMode = true;
     m_bulletManager->Clear();
+    m_enemyManager->Clear();  // 雑魚クリア
     
-    // Spawn boss enemy at top center (x, y, health=500, pattern=3)
-    m_enemyManager->SpawnEnemy(PLAY_AREA_WIDTH / 2.0f, 150.0f, 500.0f, 3);
+    // ボスBGMに切り替え
+    m_bgm->Stop();
+    m_bgm->PlayBossBGM();
+    
+    // Spawn boss enemy at top center (x, y, health=500, pattern=0)
+    m_enemyManager->SpawnEnemy(PLAY_AREA_WIDTH / 2.0f, 150.0f, 500.0f, 0);
 }
 
 void Game::UpdateSettingsMenu() {
     // Menu navigation
     static bool upPressed = false, downPressed = false;
     static bool leftPressed = false, rightPressed = false;
+    static bool escPressed = false;
+    
+    // ESC to close and resume
+    if (GetAsyncKeyState(VK_ESCAPE) & 0x8000) {
+        if (!escPressed) {
+            m_gameState = GameState::Playing;
+        }
+        escPressed = true;
+    } else { escPressed = false; }
     
     // Up/Down to select menu item
     if (GetAsyncKeyState(VK_UP) & 0x8000) {
@@ -550,15 +647,18 @@ void Game::UpdateSettingsMenu() {
         rightPressed = true;
     } else { rightPressed = false; }
     
-    // Z to confirm Resume
-    if ((GetAsyncKeyState('Z') & 0x0001) && m_menuSelection == 2) {
-        m_isPaused = false;
-    }
-    
-    // Select Quit
-    if ((GetAsyncKeyState('Z') & 0x0001) && m_menuSelection == 3) {
-        m_isRunning = false;
-    }
+    // Z to confirm selection
+    static bool zPressed = false;
+    if (GetAsyncKeyState('Z') & 0x8000) {
+        if (!zPressed) {
+            if (m_menuSelection == 2) {
+                m_gameState = GameState::Playing;
+            } else if (m_menuSelection == 3) {
+                m_isRunning = false;
+            }
+        }
+        zPressed = true;
+    } else { zPressed = false; }
 }
 
 void Game::RenderSettingsMenu() {
@@ -601,19 +701,60 @@ void Game::RenderSettingsMenu() {
                 DirectX::XMFLOAT4(0.9f, 0.7f, 0.3f, 1.0f));
         }
     }
+    
+    // Draw text labels
+    m_graphics->GetContext()->Flush();
+    if (m_text) {
+        m_text->BeginDraw();
+        
+        // Title
+        m_text->DrawText(L"PAUSE", menuX + 100, menuY - 15, 140, 35, 2, 1);
+        
+        // Menu items (Japanese)
+        const wchar_t* labels[] = { L"BGM", L"SFX", L"Resume", L"Quit" };
+        for (int i = 0; i < 4; i++) {
+            float y = menuY + 45 + i * itemHeight;
+            int textColor = (i == m_menuSelection) ? 1 : 0;
+            m_text->DrawText(labels[i], menuX + 10, y, 180, 35, 1, textColor);
+            
+            // Show volume percentage
+            if (i < 2) {
+                wchar_t volText[16];
+                swprintf_s(volText, L"%d%%", values[i]);
+                m_text->DrawText(volText, menuX + 240, y, 50, 35, 1, textColor);
+            }
+        }
+        
+        m_text->EndDraw();
+    }
 }
 
 void Game::UpdateTitle() {
-    // Z key to start game
-    static bool zPressed = false;
+    static bool zPressed = false, leftPressed = false, rightPressed = false;
+    
+    // Left/Right to select difficulty
+    if (GetAsyncKeyState(VK_LEFT) & 0x8000) {
+        if (!leftPressed) {
+            m_titleSelection = (m_titleSelection - 1 + 3) % 3;
+        }
+        leftPressed = true;
+    } else { leftPressed = false; }
+    
+    if (GetAsyncKeyState(VK_RIGHT) & 0x8000) {
+        if (!rightPressed) {
+            m_titleSelection = (m_titleSelection + 1) % 3;
+        }
+        rightPressed = true;
+    } else { rightPressed = false; }
+    
+    // Z key to start game with selected difficulty
     if (GetAsyncKeyState('Z') & 0x8000) {
         if (!zPressed) {
+            m_difficulty = static_cast<Difficulty>(m_titleSelection);
             m_gameState = GameState::Playing;
         }
         zPressed = true;
-    } else {
-        zPressed = false;
-    }
+    } else { zPressed = false; }
     
     // ESC to quit
     if (GetAsyncKeyState(VK_ESCAPE) & 0x0001) {
@@ -635,19 +776,209 @@ void Game::RenderTitle() {
     // Flush D3D commands before D2D rendering
     m_graphics->GetContext()->Flush();
     
-    // "Press Z to Start" fading text at top
     if (m_text) {
         m_text->BeginDraw();
         
-        // Smooth fade in/out effect (0.0 to 1.0 alpha)
-        float time = static_cast<float>(GetTickCount64()) * 0.003f;
-        float alpha = (sinf(time) + 1.0f) * 0.5f; // Oscillates between 0 and 1
+        // Difficulty selection
+        const wchar_t* difficulties[] = { L"Easy", L"Normal", L"Hard" };
+        float diffY = m_height - 280.0f;
+        float centerX = m_width / 2.0f;
         
-        // Draw with fading alpha - positioned at top of screen
-        std::wstring startText = L"Zキーでスタート / Press Z to Start";
-        m_text->DrawTextWithAlpha(startText, m_width / 2.0f - 180, 50.0f, 
-                        400, 50, 2, 1, alpha);
+        for (int i = 0; i < 3; i++) {
+            float x = centerX - 150.0f + i * 120.0f;
+            int colorType = (i == m_titleSelection) ? 1 : 0;  // Gold for selected, white otherwise
+            m_text->DrawText(difficulties[i], x, diffY, 100, 40, 2, colorType);
+        }
+        
+        // Selection arrows
+        m_text->DrawText(L"< ", centerX - 180.0f, diffY, 30, 40, 2, 1);
+        m_text->DrawText(L" >", centerX + 150.0f, diffY, 30, 40, 2, 1);
+        
+        // "Press Z to Start" fading text
+        float time = static_cast<float>(GetTickCount64()) * 0.003f;
+        float alpha = (sinf(time) + 1.0f) * 0.5f;
+        
+        std::wstring startText = L"Press Z to Start";
+        float textWidth = 500.0f;
+        float textX = (m_width - textWidth) / 2.0f;
+        float textY = m_height - 180.0f;
+        m_text->DrawTextWithAlpha(startText, textX, textY, textWidth, 80, 3, 1, alpha);
         
         m_text->EndDraw();
+    }
+}
+
+float Game::GetBulletSpeedMultiplier() const {
+    switch (m_difficulty) {
+        case Difficulty::Easy: return 0.7f;
+        case Difficulty::Normal: return 1.0f;
+        case Difficulty::Hard: return 1.3f;
+        default: return 1.0f;
+    }
+}
+
+float Game::GetEnemyBulletCountMultiplier() const {
+    switch (m_difficulty) {
+        case Difficulty::Easy: return 0.6f;
+        case Difficulty::Normal: return 1.0f;
+        case Difficulty::Hard: return 1.5f;
+        default: return 1.0f;
+    }
+}
+
+void Game::UpdateGameOver() {
+    static bool upPressed = false, downPressed = false, zPressed = false;
+    
+    // Up/Down to select option
+    if (GetAsyncKeyState(VK_UP) & 0x8000) {
+        if (!upPressed) m_gameOverSelection = (m_gameOverSelection - 1 + 2) % 2;
+        upPressed = true;
+    } else { upPressed = false; }
+    
+    if (GetAsyncKeyState(VK_DOWN) & 0x8000) {
+        if (!downPressed) m_gameOverSelection = (m_gameOverSelection + 1) % 2;
+        downPressed = true;
+    } else { downPressed = false; }
+    
+    // Z to confirm
+    if (GetAsyncKeyState('Z') & 0x8000) {
+        if (!zPressed) {
+            if (m_gameOverSelection == 0 && m_continueCount > 0) {
+                // Continue
+                m_continueCount--;
+                m_lives = 3;
+                m_bombs = 3;
+                m_gameState = GameState::Playing;
+            } else {
+                // Return to title
+                ResetGame();
+                m_gameState = GameState::Title;
+            }
+        }
+        zPressed = true;
+    } else { zPressed = false; }
+}
+
+void Game::RenderGameOver() {
+    // Dark overlay
+    m_graphics->DrawSprite(0, 0, static_cast<float>(m_width), static_cast<float>(m_height),
+        DirectX::XMFLOAT4(0.0f, 0.0f, 0.0f, 0.8f));
+    
+    m_graphics->GetContext()->Flush();
+    
+    if (m_text) {
+        m_text->BeginDraw();
+        
+        float centerX = m_width / 2.0f;
+        float centerY = m_height / 2.0f;
+        
+        // Game Over text
+        m_text->DrawText(L"GAME OVER", centerX - 150, centerY - 120, 300, 60, 3, 1);
+        
+        // Final score
+        wchar_t scoreText[64];
+        swprintf_s(scoreText, L"Score: %d", m_score);
+        m_text->DrawText(scoreText, centerX - 100, centerY - 40, 200, 40, 2, 0);
+        
+        // Continue option
+        const wchar_t* continueText = m_continueCount > 0 ? L"Continue" : L"No Credits";
+        int continueColor = (m_gameOverSelection == 0 && m_continueCount > 0) ? 1 : 2;
+        m_text->DrawText(continueText, centerX - 80, centerY + 40, 200, 40, 2, continueColor);
+        
+        // Credits remaining
+        if (m_continueCount > 0) {
+            wchar_t creditText[32];
+            swprintf_s(creditText, L"(%d left)", m_continueCount);
+            m_text->DrawText(creditText, centerX + 60, centerY + 40, 100, 40, 1, 2);
+        }
+        
+        // Return to title option
+        int titleColor = (m_gameOverSelection == 1) ? 1 : 0;
+        m_text->DrawText(L"Return to Title", centerX - 100, centerY + 90, 200, 40, 2, titleColor);
+        
+        m_text->EndDraw();
+    }
+}
+
+void Game::UpdateStageClear() {
+    static bool zPressed = false;
+    
+    // Z to return to title
+    if (GetAsyncKeyState('Z') & 0x8000) {
+        if (!zPressed) {
+            ResetGame();
+            m_gameState = GameState::Title;
+        }
+        zPressed = true;
+    } else { zPressed = false; }
+}
+
+void Game::RenderStageClear() {
+    // Dark overlay with golden tint
+    m_graphics->DrawSprite(0, 0, static_cast<float>(m_width), static_cast<float>(m_height),
+        DirectX::XMFLOAT4(0.1f, 0.08f, 0.0f, 0.8f));
+    
+    m_graphics->GetContext()->Flush();
+    
+    if (m_text) {
+        m_text->BeginDraw();
+        
+        float centerX = m_width / 2.0f;
+        float centerY = m_height / 2.0f;
+        
+        // Stage Clear text
+        m_text->DrawText(L"STAGE CLEAR!", centerX - 180, centerY - 120, 360, 60, 3, 1);
+        
+        // Final score
+        wchar_t scoreText[64];
+        swprintf_s(scoreText, L"Score: %d", m_score);
+        m_text->DrawText(scoreText, centerX - 100, centerY - 20, 200, 40, 2, 0);
+        
+        // Hi-Score
+        if (m_score >= m_hiScore) {
+            m_text->DrawText(L"NEW HIGH SCORE!", centerX - 120, centerY + 30, 240, 40, 2, 1);
+        }
+        
+        // Press Z to continue
+        float time = static_cast<float>(GetTickCount64()) * 0.003f;
+        float alpha = (sinf(time) + 1.0f) * 0.5f;
+        m_text->DrawTextWithAlpha(L"Press Z", centerX - 80, centerY + 100, 160, 40, 2, 0, alpha);
+        
+        m_text->EndDraw();
+    }
+}
+
+void Game::ResetGame() {
+    m_score = 0;
+    m_lives = 3;
+    m_bombs = 3;
+    m_power = 0;
+    m_graze = 0;
+    m_combo = 0;
+    m_specialGauge = 0;
+    m_specialReady = false;
+    m_continueCount = 3;
+    m_bossMode = false;
+    m_bulletManager->Clear();
+    m_items->Clear();
+    m_enemyManager->Clear();
+    m_enemyManager->ResetWaves();
+    m_enemyManager->SpawnWave(0);
+    m_player->SetPosition(PLAY_AREA_WIDTH / 2.0f, PLAY_AREA_HEIGHT - 100.0f);
+}
+
+void Game::SaveHiScore() {
+    std::ofstream file("hiscore.dat", std::ios::binary);
+    if (file.is_open()) {
+        file.write(reinterpret_cast<const char*>(&m_hiScore), sizeof(m_hiScore));
+        file.close();
+    }
+}
+
+void Game::LoadHiScore() {
+    std::ifstream file("hiscore.dat", std::ios::binary);
+    if (file.is_open()) {
+        file.read(reinterpret_cast<char*>(&m_hiScore), sizeof(m_hiScore));
+        file.close();
     }
 }

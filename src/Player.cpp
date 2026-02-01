@@ -2,7 +2,7 @@
 #include "Graphics.h"
 #include "Input.h"
 #include "BulletManager.h"
-#include "SoundManager.h"
+#include "AudioManager.h"
 #include "TextureLoader.h"
 #include <windows.h>
 
@@ -25,7 +25,7 @@ Player::Player()
 Player::~Player() {
 }
 
-void Player::Initialize(Graphics* graphics, BulletManager* bulletManager, SoundManager* sound) {
+void Player::Initialize(Graphics* graphics, BulletManager* bulletManager, AudioManager* sound) {
     m_bulletManager = bulletManager;
     m_sound = sound;
     
@@ -77,40 +77,75 @@ void Player::Update(Input* input, float deltaTime, int screenWidth, int screenHe
     // 射撃 (Z or マウス左クリック)
     m_currentCooldown -= deltaTime;
     bool shooting = input->IsKeyDown('Z') || (GetAsyncKeyState(VK_LBUTTON) & 0x8000);
+    bool shiftHeld = (GetAsyncKeyState(VK_SHIFT) & 0x8000) != 0;  // SHIFT押下で通常弾
+    
     if (shooting && m_currentCooldown <= 0.0f) {
         if (m_bulletManager) {
-            // 進化レベルに応じた攻撃パターン（5段階）
-            switch (m_evolutionLevel) {
-                case 0:  // 初期：中央1発
-                    m_bulletManager->SpawnPlayerBullet(m_position.x, m_position.y - 20.0f, 0.0f, -1600.0f);
-                    break;
-                case 1:  // 進化1：2発
-                    m_bulletManager->SpawnPlayerBullet(m_position.x - 10.0f, m_position.y - 20.0f, 0.0f, -1600.0f);
-                    m_bulletManager->SpawnPlayerBullet(m_position.x + 10.0f, m_position.y - 20.0f, 0.0f, -1600.0f);
-                    break;
-                case 2:  // 進化2：3発
-                    m_bulletManager->SpawnPlayerBullet(m_position.x, m_position.y - 20.0f, 0.0f, -1600.0f);
-                    m_bulletManager->SpawnPlayerBullet(m_position.x - 15.0f, m_position.y - 10.0f, 0.0f, -1600.0f);
-                    m_bulletManager->SpawnPlayerBullet(m_position.x + 15.0f, m_position.y - 10.0f, 0.0f, -1600.0f);
-                    break;
-                case 3:  // 進化3：3発 + ホーミングミサイル
-                    m_bulletManager->SpawnPlayerBullet(m_position.x, m_position.y - 20.0f, 0.0f, -1600.0f);
-                    m_bulletManager->SpawnPlayerBullet(m_position.x - 15.0f, m_position.y - 10.0f, 0.0f, -1600.0f);
-                    m_bulletManager->SpawnPlayerBullet(m_position.x + 15.0f, m_position.y - 10.0f, 0.0f, -1600.0f);
-                    m_bulletManager->SpawnHomingMissile(m_position.x - 30.0f, m_position.y, -50.0f, -400.0f);
-                    m_bulletManager->SpawnHomingMissile(m_position.x + 30.0f, m_position.y, 50.0f, -400.0f);
-                    break;
-                case 4:  // MAX進化：5発 + ホーミングミサイル×4
-                    m_bulletManager->SpawnPlayerBullet(m_position.x, m_position.y - 20.0f, 0.0f, -1800.0f);
-                    m_bulletManager->SpawnPlayerBullet(m_position.x - 12.0f, m_position.y - 15.0f, 0.0f, -1700.0f);
-                    m_bulletManager->SpawnPlayerBullet(m_position.x + 12.0f, m_position.y - 15.0f, 0.0f, -1700.0f);
-                    m_bulletManager->SpawnPlayerBullet(m_position.x - 24.0f, m_position.y - 10.0f, -50.0f, -1600.0f);
-                    m_bulletManager->SpawnPlayerBullet(m_position.x + 24.0f, m_position.y - 10.0f, 50.0f, -1600.0f);
-                    m_bulletManager->SpawnHomingMissile(m_position.x - 35.0f, m_position.y, -80.0f, -400.0f);
-                    m_bulletManager->SpawnHomingMissile(m_position.x + 35.0f, m_position.y, 80.0f, -400.0f);
-                    m_bulletManager->SpawnHomingMissile(m_position.x - 20.0f, m_position.y + 10.0f, -40.0f, -350.0f);
-                    m_bulletManager->SpawnHomingMissile(m_position.x + 20.0f, m_position.y + 10.0f, 40.0f, -350.0f);
-                    break;
+            if (shiftHeld) {
+                // SHIFT押下時：通常弾（高速直進）
+                switch (m_evolutionLevel) {
+                    case 0:
+                        m_bulletManager->SpawnPlayerBullet(m_position.x, m_position.y - 20.0f, 0.0f, -3200.0f);
+                        break;
+                    case 1:
+                        m_bulletManager->SpawnPlayerBullet(m_position.x - 10.0f, m_position.y - 20.0f, 0.0f, -3200.0f);
+                        m_bulletManager->SpawnPlayerBullet(m_position.x + 10.0f, m_position.y - 20.0f, 0.0f, -3200.0f);
+                        break;
+                    case 2:
+                        m_bulletManager->SpawnPlayerBullet(m_position.x, m_position.y - 20.0f, 0.0f, -3200.0f);
+                        m_bulletManager->SpawnPlayerBullet(m_position.x - 15.0f, m_position.y - 10.0f, 0.0f, -3200.0f);
+                        m_bulletManager->SpawnPlayerBullet(m_position.x + 15.0f, m_position.y - 10.0f, 0.0f, -3200.0f);
+                        break;
+                    case 3:
+                        m_bulletManager->SpawnPlayerBullet(m_position.x, m_position.y - 20.0f, 0.0f, -3200.0f);
+                        m_bulletManager->SpawnPlayerBullet(m_position.x - 12.0f, m_position.y - 15.0f, 0.0f, -3200.0f);
+                        m_bulletManager->SpawnPlayerBullet(m_position.x + 12.0f, m_position.y - 15.0f, 0.0f, -3200.0f);
+                        m_bulletManager->SpawnPlayerBullet(m_position.x - 24.0f, m_position.y - 10.0f, -50.0f, -3000.0f);
+                        m_bulletManager->SpawnPlayerBullet(m_position.x + 24.0f, m_position.y - 10.0f, 50.0f, -3000.0f);
+                        break;
+                    case 4:
+                        m_bulletManager->SpawnPlayerBullet(m_position.x, m_position.y - 20.0f, 0.0f, -3600.0f);
+                        m_bulletManager->SpawnPlayerBullet(m_position.x - 10.0f, m_position.y - 15.0f, 0.0f, -3400.0f);
+                        m_bulletManager->SpawnPlayerBullet(m_position.x + 10.0f, m_position.y - 15.0f, 0.0f, -3400.0f);
+                        m_bulletManager->SpawnPlayerBullet(m_position.x - 20.0f, m_position.y - 10.0f, -30.0f, -3200.0f);
+                        m_bulletManager->SpawnPlayerBullet(m_position.x + 20.0f, m_position.y - 10.0f, 30.0f, -3200.0f);
+                        m_bulletManager->SpawnPlayerBullet(m_position.x - 30.0f, m_position.y - 5.0f, -60.0f, -3000.0f);
+                        m_bulletManager->SpawnPlayerBullet(m_position.x + 30.0f, m_position.y - 5.0f, 60.0f, -3000.0f);
+                        break;
+                }
+            } else {
+                // 通常時：ホーミング弾（速度2倍）
+                switch (m_evolutionLevel) {
+                    case 0:
+                        m_bulletManager->SpawnHomingMissile(m_position.x, m_position.y - 20.0f, 0.0f, -1600.0f);
+                        break;
+                    case 1:
+                        m_bulletManager->SpawnHomingMissile(m_position.x - 15.0f, m_position.y - 20.0f, -60.0f, -1600.0f);
+                        m_bulletManager->SpawnHomingMissile(m_position.x + 15.0f, m_position.y - 20.0f, 60.0f, -1600.0f);
+                        break;
+                    case 2:
+                        m_bulletManager->SpawnHomingMissile(m_position.x, m_position.y - 20.0f, 0.0f, -1600.0f);
+                        m_bulletManager->SpawnHomingMissile(m_position.x - 20.0f, m_position.y - 10.0f, -100.0f, -1400.0f);
+                        m_bulletManager->SpawnHomingMissile(m_position.x + 20.0f, m_position.y - 10.0f, 100.0f, -1400.0f);
+                        break;
+                    case 3:
+                        m_bulletManager->SpawnHomingMissile(m_position.x, m_position.y - 20.0f, 0.0f, -1800.0f);
+                        m_bulletManager->SpawnHomingMissile(m_position.x - 20.0f, m_position.y - 10.0f, -80.0f, -1600.0f);
+                        m_bulletManager->SpawnHomingMissile(m_position.x + 20.0f, m_position.y - 10.0f, 80.0f, -1600.0f);
+                        m_bulletManager->SpawnHomingMissile(m_position.x - 35.0f, m_position.y, -140.0f, -1200.0f);
+                        m_bulletManager->SpawnHomingMissile(m_position.x + 35.0f, m_position.y, 140.0f, -1200.0f);
+                        break;
+                    case 4:
+                        m_bulletManager->SpawnHomingMissile(m_position.x, m_position.y - 20.0f, 0.0f, -2000.0f);
+                        m_bulletManager->SpawnHomingMissile(m_position.x - 15.0f, m_position.y - 15.0f, -60.0f, -1800.0f);
+                        m_bulletManager->SpawnHomingMissile(m_position.x + 15.0f, m_position.y - 15.0f, 60.0f, -1800.0f);
+                        m_bulletManager->SpawnHomingMissile(m_position.x - 30.0f, m_position.y - 10.0f, -120.0f, -1600.0f);
+                        m_bulletManager->SpawnHomingMissile(m_position.x + 30.0f, m_position.y - 10.0f, 120.0f, -1600.0f);
+                        m_bulletManager->SpawnHomingMissile(m_position.x - 45.0f, m_position.y, -180.0f, -1400.0f);
+                        m_bulletManager->SpawnHomingMissile(m_position.x + 45.0f, m_position.y, 180.0f, -1400.0f);
+                        m_bulletManager->SpawnHomingMissile(m_position.x, m_position.y + 10.0f, 0.0f, -1200.0f);
+                        break;
+                }
             }
             
             // 弾発射音

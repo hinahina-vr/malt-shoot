@@ -43,4 +43,10 @@ private:
     
     // 樽テクスチャ
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_barrelTexture;
+    
+    // ホーミング用敵位置リスト
+    std::vector<DirectX::XMFLOAT2> m_enemyPositions;
+    
+public:
+    void SetEnemyPositions(const std::vector<DirectX::XMFLOAT2>& positions) { m_enemyPositions = positions; }
 };

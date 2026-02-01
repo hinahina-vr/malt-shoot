@@ -36,6 +36,46 @@ void BulletManager::Update(float deltaTime, int screenWidth, int screenHeight) {
     for (auto& bullet : m_bullets) {
         if (!bullet.isActive) continue;
 
+        // ホーミング処理（プレイヤー弾で敵を追尾）
+        if (bullet.isHoming && bullet.isPlayerBullet && !m_enemyPositions.empty()) {
+            // 最も近い敵を探す
+            float minDist = 999999.0f;
+            DirectX::XMFLOAT2 closestEnemy = { 0, 0 };
+            for (const auto& pos : m_enemyPositions) {
+                float dx = pos.x - bullet.position.x;
+                float dy = pos.y - bullet.position.y;
+                float dist = dx * dx + dy * dy;
+                if (dist < minDist) {
+                    minDist = dist;
+                    closestEnemy = pos;
+                }
+            }
+            
+            // 敵に向かって速度を調整（強めのホーミング）
+            float dx = closestEnemy.x - bullet.position.x;
+            float dy = closestEnemy.y - bullet.position.y;
+            float dist = sqrtf(dx * dx + dy * dy);
+            if (dist > 1.0f) {
+                float targetAngle = atan2f(dy, dx);
+                float currentAngle = atan2f(bullet.velocity.y, bullet.velocity.x);
+                float angleDiff = targetAngle - currentAngle;
+                
+                // 角度差を-PI〜PIに正規化
+                while (angleDiff > 3.14159f) angleDiff -= 6.28318f;
+                while (angleDiff < -3.14159f) angleDiff += 6.28318f;
+                
+                // 強めの旋回（毎フレーム最大0.15ラジアン）
+                float turnRate = 0.15f;
+                if (angleDiff > turnRate) angleDiff = turnRate;
+                if (angleDiff < -turnRate) angleDiff = -turnRate;
+                
+                float newAngle = currentAngle + angleDiff;
+                float speed = sqrtf(bullet.velocity.x * bullet.velocity.x + bullet.velocity.y * bullet.velocity.y);
+                bullet.velocity.x = cosf(newAngle) * speed;
+                bullet.velocity.y = sinf(newAngle) * speed;
+            }
+        }
+
         // Angular velocity
         if (bullet.angularVelocity != 0.0f) {
             bullet.angle += bullet.angularVelocity * deltaTime;

@@ -163,7 +163,8 @@ void EnemyManager::SpawnWave(int waveNumber) {
             
         case 3:
             // ウェーブ4: ボス かい
-            SpawnEnemy(320.0f, 150.0f, 500.0f, 3, EnemyType::Boss);
+            // ボスはここではスポーンしない（Game側で3秒ディレイ後にスポーン）
+            m_bossWaveJustStarted = true;
             break;
     }
 }
@@ -181,3 +182,11 @@ bool EnemyManager::AllEnemiesDead() const {
     return !m_enemies.empty();
 }
 
+void EnemyManager::DamageBoss(float damage) {
+    for (auto& enemy : m_enemies) {
+        if (enemy->IsActive() && enemy->GetType() == EnemyType::Boss) {
+            enemy->TakeDamage(damage);
+            break;
+        }
+    }
+}

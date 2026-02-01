@@ -10,7 +10,7 @@
 #include "Background3D.h"
 #include "ParticleSystem.h"
 #include "ItemManager.h"
-#include "SoundManager.h"
+#include "AudioManager.h"
 #include "BGMPlayer.h"
 #include "TextRenderer.h"
 #include "TextureLoader.h"
@@ -50,7 +50,7 @@ private:
     std::unique_ptr<Background3D> m_background;
     std::unique_ptr<ParticleSystem> m_particles;
     std::unique_ptr<ItemManager> m_items;
-    std::unique_ptr<SoundManager> m_sound;
+    std::unique_ptr<AudioManager> m_sound;
     std::unique_ptr<BGMPlayer> m_bgm;
     std::unique_ptr<TextRenderer> m_text;
 

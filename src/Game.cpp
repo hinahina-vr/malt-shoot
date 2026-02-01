@@ -84,7 +84,7 @@ bool Game::Initialize(HWND hWnd, int width, int height) {
     m_items = std::make_unique<ItemManager>();
     m_items->Initialize(m_graphics.get());
 
-    m_sound = std::make_unique<SoundManager>();
+    m_sound = std::make_unique<AudioManager>();
     m_sound->Initialize();
 
     m_bgm = std::make_unique<BGMPlayer>();
@@ -156,7 +156,7 @@ void Game::Update() {
             return;
         case GameState::VictoryDialogue:
             UpdateVictoryDialogue();
-            return;
+            break;  // 背景更新を継続するためreturnではなくbreak
     }
     
     // ESC to toggle pause/settings menu
@@ -173,10 +173,12 @@ void Game::Update() {
     
     HandleDebugInput();  // B=Boss, R=Reset, P=Power, G=Gauge
     
-    // ボス会話中はゲームを一時停止
+    // ボス会話中も背景は更新継続
     if (m_bossDialogueActive) {
+        m_background->Update(m_deltaTime);
+        m_particles->Update(m_deltaTime);
         UpdateBossDialogue();
-        return;  // ゲーム更新をスキップ
+        return;  // ゲームロジックはスキップ
     }
     
     m_background->Update(m_deltaTime);
@@ -199,6 +201,10 @@ void Game::Update() {
             m_bossMode = true;
             m_bgm->Stop();
             m_bgm->PlayBossBGM();
+            
+            // ボスをスポーン！
+            m_enemyManager->SpawnEnemy(320.0f, 150.0f, 500.0f, 3, EnemyType::Boss);
+            
             StartBossDialogue();
         }
     }
@@ -210,6 +216,15 @@ void Game::Update() {
         m_victoryDialogueLine = 0;
         m_gameState = GameState::VictoryDialogue;
     }
+    
+    // ホーミング用に敵の位置をBulletManagerに渡す
+    std::vector<DirectX::XMFLOAT2> enemyPositions;
+    for (const auto& enemy : m_enemyManager->GetEnemies()) {
+        if (enemy->IsActive()) {
+            enemyPositions.push_back(enemy->GetPosition());
+        }
+    }
+    m_bulletManager->SetEnemyPositions(enemyPositions);
     
     m_bulletManager->Update(m_deltaTime, PLAY_AREA_WIDTH, PLAY_AREA_HEIGHT);
     m_particles->Update(m_deltaTime);
@@ -387,12 +402,7 @@ void Game::Render() {
         return;
     }
     
-    // Render victory dialogue (ボス撃破後セリフ)
-    if (m_gameState == GameState::VictoryDialogue) {
-        RenderVictoryDialogue();
-        m_graphics->EndFrame();
-        return;
-    }
+    // VictoryDialogueはゲーム画面上にオーバーレイ（後で描画）
     
     // Render paused/settings menu
     if (m_gameState == GameState::Paused) {
@@ -469,6 +479,11 @@ void Game::Render() {
     
     // ボス会話描画
     RenderBossDialogue();
+    
+    // 勝利セリフオーバーレイ（ゲーム画面の上に表示）
+    if (m_gameState == GameState::VictoryDialogue) {
+        RenderVictoryDialogue();
+    }
 
     m_graphics->EndFrame();
 }
@@ -657,10 +672,13 @@ void Game::HandleDebugInput() {
         rPressed = true;
     } else { rPressed = false; }
     
-    // Press P for full power
+    // Press P for evolution level up（装備進化）
     if (GetAsyncKeyState('P') & 0x8000) {
         if (!pPressed) {
-            m_power = m_maxPower;
+            int currentLevel = m_player->GetEvolutionLevel();
+            if (currentLevel < 4) {
+                m_player->SetEvolutionLevel(currentLevel + 1);
+            }
         }
         pPressed = true;
     } else { pPressed = false; }
@@ -673,6 +691,16 @@ void Game::HandleDebugInput() {
         }
         gPressed = true;
     } else { gPressed = false; }
+    
+    // Press K to damage boss (one spell card)
+    static bool kPressed = false;
+    if (GetAsyncKeyState('K') & 0x8000) {
+        if (!kPressed && m_bossMode) {
+            // ボスに大ダメージ（スペルカード1枚分）
+            m_enemyManager->DamageBoss(100.0f);
+        }
+        kPressed = true;
+    } else { kPressed = false; }
     
     // Press C to change character（ひなひな⇔かい）
     static bool cPressed = false;
@@ -1086,6 +1114,10 @@ void Game::RenderStageClear() {
 }
 
 void Game::UpdateVictoryDialogue() {
+    // 背景とパーティクルは更新継続
+    m_background->Update(m_deltaTime);
+    m_particles->Update(m_deltaTime);
+    
     m_victoryDialogueTimer += m_deltaTime;
     
     // 3秒間セリフ表示後、StageClearへ
@@ -1093,16 +1125,16 @@ void Game::UpdateVictoryDialogue() {
         m_gameState = GameState::StageClear;
     }
     
-    // Zキーでスキップ
-    static bool zPressed = false;
-    if (GetAsyncKeyState('Z') & 0x8000) {
-        if (!zPressed) {
+    // Zキーでスキップ（1秒後から有効、押しっぱなし無効）
+    static bool zWasPressed = true;  // 最初はtrue（押しっぱなし対策）
+    bool zNowPressed = (GetAsyncKeyState('Z') & 0x8000) != 0;
+    
+    if (m_victoryDialogueTimer > 1.0f) {
+        if (zNowPressed && !zWasPressed) {
             m_gameState = GameState::StageClear;
         }
-        zPressed = true;
-    } else {
-        zPressed = false;
     }
+    zWasPressed = zNowPressed;
 }
 
 void Game::RenderVictoryDialogue() {

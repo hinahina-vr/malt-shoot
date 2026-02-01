@@ -9,14 +9,14 @@ using Microsoft::WRL::ComPtr;
 class Graphics;
 class Input;
 class BulletManager;
-class SoundManager;
+class AudioManager;
 
 class Player {
 public:
     Player();
     ~Player();
 
-    void Initialize(Graphics* graphics, BulletManager* bulletManager, SoundManager* sound = nullptr);
+    void Initialize(Graphics* graphics, BulletManager* bulletManager, AudioManager* sound = nullptr);
     void Update(Input* input, float deltaTime, int screenWidth, int screenHeight);
     void Render(Graphics* graphics);
 
@@ -25,6 +25,7 @@ public:
     float GetRadius() const { return m_hitboxRadius; }
     int GetPower() const { return m_power; }
     int GetEvolutionLevel() const { return m_evolutionLevel; }
+    void SetEvolutionLevel(int level) { m_evolutionLevel = (level > 4) ? 4 : (level < 0 ? 0 : level); }
     void SetPower(int power);
     void AddPower(int amount);
 
@@ -41,6 +42,6 @@ private:
     int m_evolutionLevel = 0;  // 進化段階（0-4、5段階）
 
     BulletManager* m_bulletManager;
-    SoundManager* m_sound;
+    AudioManager* m_sound;
     ComPtr<ID3D11ShaderResourceView> m_texture;
 };

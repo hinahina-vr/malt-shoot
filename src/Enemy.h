@@ -44,6 +44,7 @@ public:
     float GetHealth() const { return m_health; }
     float GetMaxHealth() const { return m_maxHealth; }
     float GetHealthPercent() const { return m_maxHealth > 0 ? m_health / m_maxHealth : 0; }
+    float GetDisplayHealthPercent() const { return m_maxHealth > 0 ? m_displayHealth / m_maxHealth : 0; }
     bool IsBoss() const { return m_type == EnemyType::Boss; }
 
     // 弾幕パターンの設定
@@ -94,4 +95,11 @@ private:
     int m_currentSpell = 0; // 現在のスペル番号
     float m_invincibleTimer = 0.0f;  // 無敵時間
     bool m_showingCutin = false;     // カットイン表示中
+    
+    // 雑魚敵タイムアウト
+    float m_lifetime = 0.0f;          // 生存時間
+    float m_maxLifetime = 8.0f;       // 最大生存時間（8秒で退場開始）
+    
+    // HP表示イージング
+    float m_displayHealth = 0.0f;     // 表示用HP（イージング付き）
 };

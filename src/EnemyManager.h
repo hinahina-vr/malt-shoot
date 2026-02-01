@@ -29,7 +29,9 @@ public:
     int GetCurrentWave() const { return m_currentWave; }
     bool IsBossWave() const { return (m_currentWave % 4) == 3; }
     bool AllEnemiesDead() const;
-    void ResetWaves() { m_currentWave = 0; m_waveTimer = 0.0f; }
+    void ResetWaves() { m_currentWave = 0; m_waveTimer = 0.0f; m_bossWaveJustStarted = false; }
+    bool DidBossWaveJustStart() const { return m_bossWaveJustStarted; }
+    void ClearBossWaveStartFlag() { m_bossWaveJustStarted = false; }
 
 private:
     std::vector<std::unique_ptr<Enemy>> m_enemies;
@@ -37,6 +39,7 @@ private:
     DirectX::XMFLOAT2 m_playerPos;
     float m_waveTimer;
     int m_currentWave;
+    bool m_bossWaveJustStarted;  // ボスウェーブ開始フラグ
     
     // Enemy textures
     ComPtr<ID3D11ShaderResourceView> m_barrelTexture;

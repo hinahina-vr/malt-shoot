@@ -10,6 +10,7 @@ EnemyManager::EnemyManager()
     , m_playerPos{ 0.0f, 0.0f }
     , m_waveTimer(0.0f)
     , m_currentWave(0)
+    , m_bossWaveJustStarted(false)
 {
 }
 
@@ -69,9 +70,13 @@ void EnemyManager::Update(float deltaTime, int screenWidth, int screenHeight) {
     if (allDead && m_waveTimer > 2.0f) {
         // ボスウェーブ時は自動進行しない（Game側でクリア判定）
         if ((m_currentWave % 4) != 3) {
-            m_currentWave++;
-            SpawnWave(m_currentWave);
-            m_waveTimer = 0.0f;
+            // 次がボスウェーブなら5秒待機、それ以外は2秒
+            float waitTime = ((m_currentWave + 1) % 4 == 3) ? 5.0f : 2.0f;
+            if (m_waveTimer > waitTime) {
+                m_currentWave++;
+                SpawnWave(m_currentWave);
+                m_waveTimer = 0.0f;
+            }
         }
     }
 }
@@ -109,6 +114,11 @@ void EnemyManager::SpawnEnemy(float x, float y, float health, int patternId, Ene
 
 void EnemyManager::SpawnWave(int waveNumber) {
     Clear();
+    
+    // ボスウェーブ開始フラグ
+    if ((waveNumber % 4) == 3) {
+        m_bossWaveJustStarted = true;
+    }
     
     switch (waveNumber % 4) {
         case 0:

@@ -180,6 +180,15 @@ void Game::Update() {
     m_enemyManager->SetPlayerPosition(m_player->GetPosition());
     m_enemyManager->Update(m_deltaTime, PLAY_AREA_WIDTH, PLAY_AREA_HEIGHT);
     
+    // ボスウェーブ開始を検出してセリフ開始（通常プレイ時）
+    if (m_enemyManager->DidBossWaveJustStart() && !m_bossMode) {
+        m_bossMode = true;
+        m_bgm->Stop();
+        m_bgm->PlayBossBGM();
+        StartBossDialogue();
+        m_enemyManager->ClearBossWaveStartFlag();
+    }
+    
     // ボス撃破時→ステージクリア
     if (m_enemyManager->IsBossWave() && m_enemyManager->AllEnemiesDead()) {
         if (m_score > m_hiScore) m_hiScore = m_score;
@@ -1142,33 +1151,25 @@ void Game::StartBossDialogue() {
 void Game::UpdateBossDialogue() {
     if (!m_bossDialogueActive) return;
     
-    // タイプライター効果
-    m_dialogueCharTimer += m_deltaTime;
-    if (m_dialogueCharTimer >= 0.03f) {  // 1文字0.03秒
-        m_dialogueCharTimer = 0.0f;
-        int len = static_cast<int>(wcslen(g_bossDialogues[m_dialogueLine]));
-        if (m_dialogueCharIndex < len) {
-            m_dialogueCharIndex++;
-        }
-    }
-    
-    // Zキーで次のセリフ（文字が全部出てから）
+    // セリフは一気に表示（タイプライター効果なし）
     int len = static_cast<int>(wcslen(g_bossDialogues[m_dialogueLine]));
-    if (m_dialogueCharIndex >= len) {
-        static bool zPressed = false;
-        if (m_input->IsKeyDown('Z')) {
-            if (!zPressed) {
-                zPressed = true;
-                m_dialogueLine++;
-                m_dialogueCharIndex = 0;
-                
-                if (m_dialogueLine >= g_numDialogues) {
-                    m_bossDialogueActive = false;
-                }
+    m_dialogueCharIndex = len;  // 全文字表示
+    
+    // Zキー or マウス左クリックで次のセリフ
+    static bool zPressed = false;
+    bool isPressed = m_input->IsKeyDown('Z') || (GetAsyncKeyState(VK_LBUTTON) & 0x8000);
+    if (isPressed) {
+        if (!zPressed) {
+            zPressed = true;
+            m_dialogueLine++;
+            m_dialogueCharIndex = 0;
+            
+            if (m_dialogueLine >= g_numDialogues) {
+                m_bossDialogueActive = false;
             }
-        } else {
-            zPressed = false;
         }
+    } else {
+        zPressed = false;
     }
 }
 
@@ -1201,7 +1202,7 @@ void Game::RenderBossDialogue() {
         // 次へ進むヒント
         int len = static_cast<int>(wcslen(g_bossDialogues[m_dialogueLine]));
         if (m_dialogueCharIndex >= len) {
-            m_text->DrawText(L"Press Z >>", boxX + boxW - 150.0f, boxY + boxH - 35.0f, 130.0f, 25.0f, 0, 2);
+            m_text->DrawText(L"Z or Click >>", boxX + boxW - 180.0f, boxY + boxH - 35.0f, 160.0f, 25.0f, 0, 2);
         }
         m_text->EndDraw();
     }

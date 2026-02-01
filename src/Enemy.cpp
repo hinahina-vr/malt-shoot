@@ -31,11 +31,13 @@ void Enemy::Initialize(float x, float y, float health, EnemyType type) {
     m_targetPosition = { x, y };
     m_health = health;
     m_maxHealth = health;
+    m_displayHealth = health;  // 表示用HP初期化
     m_state = EnemyState::Entering;
     m_shootTimer = 0.0f;
     m_patternTimer = 0.0f;
     m_patternPhase = 0;
     m_type = type;
+    m_lifetime = 0.0f;  // 生存時間初期化
     
     // Set radius based on type
     switch (type) {
@@ -78,6 +80,19 @@ void Enemy::Update(float deltaTime, int screenWidth, int screenHeight, BulletMan
         case EnemyState::Active: {
             m_shootTimer += deltaTime;
             m_patternTimer += deltaTime;
+            m_lifetime += deltaTime;
+            
+            // HP表示イージング（スムーズに下がる）
+            float easeSpeed = 5.0f * deltaTime;
+            if (m_displayHealth > m_health) {
+                m_displayHealth -= (m_displayHealth - m_health) * easeSpeed;
+                if (m_displayHealth < m_health) m_displayHealth = m_health;
+            }
+            
+            // 雑魚敵タイムアウト（ボス以外、8秒で退場開始）
+            if (m_type != EnemyType::Boss && m_lifetime > m_maxLifetime) {
+                m_state = EnemyState::Leaving;
+            }
             
             // ボスはHP%に応じてパターン自動切り替え（スペルカード風）
             if (m_type == EnemyType::Boss) {

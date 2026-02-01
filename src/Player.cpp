@@ -3,6 +3,7 @@
 #include "Input.h"
 #include "BulletManager.h"
 #include "TextureLoader.h"
+#include <windows.h>
 
 using namespace DirectX;
 
@@ -70,9 +71,10 @@ void Player::Update(Input* input, float deltaTime, int screenWidth, int screenHe
     if (m_position.y < halfSize) m_position.y = halfSize;
     if (m_position.y > screenHeight - halfSize) m_position.y = static_cast<float>(screenHeight) - halfSize;
 
-    // 射撃
+    // 射撃 (Z or マウス左クリック)
     m_currentCooldown -= deltaTime;
-    if (input->IsKeyDown('Z') && m_currentCooldown <= 0.0f) {
+    bool shooting = input->IsKeyDown('Z') || (GetAsyncKeyState(VK_LBUTTON) & 0x8000);
+    if (shooting && m_currentCooldown <= 0.0f) {
         // 自機弾を発射（弾速2倍！）- 中央から1発
         if (m_bulletManager) {
             m_bulletManager->SpawnPlayerBullet(m_position.x, m_position.y - 20.0f, 0.0f, -1600.0f);

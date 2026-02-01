@@ -650,26 +650,31 @@ void Game::UpdateSettingsMenu() {
     static bool upPressed = false, downPressed = false;
     static bool leftPressed = false, rightPressed = false;
     static bool escPressed = false;
+    static float escCooldown = 0.0f;
+    
+    // ESC連打防止（0.3秒クールダウン）
+    if (escCooldown > 0.0f) escCooldown -= m_deltaTime;
     
     // ESC to close and resume
     if (GetAsyncKeyState(VK_ESCAPE) & 0x8000) {
-        if (!escPressed) {
+        if (!escPressed && escCooldown <= 0.0f) {
             m_gameState = GameState::Playing;
+            escCooldown = 0.3f;
         }
         escPressed = true;
     } else { escPressed = false; }
     
-    // Up/Down to select menu item
+    // Up/Down to select menu item (5項目に変更)
     if (GetAsyncKeyState(VK_UP) & 0x8000) {
         if (!upPressed) {
-            m_menuSelection = (m_menuSelection - 1 + 4) % 4;
+            m_menuSelection = (m_menuSelection - 1 + 5) % 5;
         }
         upPressed = true;
     } else { upPressed = false; }
     
     if (GetAsyncKeyState(VK_DOWN) & 0x8000) {
         if (!downPressed) {
-            m_menuSelection = (m_menuSelection + 1) % 4;
+            m_menuSelection = (m_menuSelection + 1) % 5;
         }
         downPressed = true;
     } else { downPressed = false; }
@@ -699,13 +704,17 @@ void Game::UpdateSettingsMenu() {
         rightPressed = true;
     } else { rightPressed = false; }
     
-    // Z to confirm selection
+    // Z or マウス左クリック to confirm selection
     static bool zPressed = false;
-    if (GetAsyncKeyState('Z') & 0x8000) {
+    bool isZorClick = (GetAsyncKeyState('Z') & 0x8000) || (GetAsyncKeyState(VK_LBUTTON) & 0x8000);
+    if (isZorClick) {
         if (!zPressed) {
             if (m_menuSelection == 2) {
                 m_gameState = GameState::Playing;
             } else if (m_menuSelection == 3) {
+                ResetGame();
+                m_gameState = GameState::Title;
+            } else if (m_menuSelection == 4) {
                 m_isRunning = false;
             }
         }
@@ -722,8 +731,8 @@ void Game::RenderSettingsMenu() {
     float menuY = m_height / 2.0f - 150;
     float itemHeight = 60;
     
-    // Menu background
-    m_graphics->DrawSprite(menuX - 20, menuY - 20, 340, 300,
+    // Menu background (5項目用に拡大)
+    m_graphics->DrawSprite(menuX - 20, menuY - 20, 340, 360,
         DirectX::XMFLOAT4(0.1f, 0.05f, 0.15f, 0.9f));
     
     // Title bar
@@ -759,12 +768,12 @@ void Game::RenderSettingsMenu() {
     if (m_text) {
         m_text->BeginDraw();
         
-        // Title
-        m_text->DrawText(L"PAUSE", menuX + 100, menuY - 15, 140, 35, 2, 1);
+        // Title (日本語)
+        m_text->DrawText(L"ポーズ", menuX + 100, menuY - 15, 140, 35, 2, 1);
         
-        // Menu items (Japanese)
-        const wchar_t* labels[] = { L"BGM", L"SFX", L"Resume", L"Quit" };
-        for (int i = 0; i < 4; i++) {
+        // Menu items (日本語)
+        const wchar_t* labels[] = { L"BGM音量", L"効果音", L"ゲームに戻る", L"タイトルに戻る", L"終了" };
+        for (int i = 0; i < 5; i++) {
             float y = menuY + 45 + i * itemHeight;
             int textColor = (i == m_menuSelection) ? 1 : 0;
             m_text->DrawText(labels[i], menuX + 10, y, 180, 35, 1, textColor);

@@ -59,13 +59,13 @@ public:
     bool IsShowingCutin() const { return m_showingCutin; }
     void ClearCutin() { m_showingCutin = false; }
     
-    // スペルカード名（ウイスキーテーマ）- 日本語はGame.cppで設定
+    // スペルカード名（ウイスキーテーマ）
     const wchar_t* GetSpellCardName() const {
         static const wchar_t* names[] = {
-            L"Kohaku - Amber Memory",
-            L"Jukusei - 12 Years",
-            L"Tarurei - Barrel Dance",
-            L"Shuen - Last Drop"
+            L"琥珀符「アンバー・メモリー」",
+            L"熟成符「12年の夢」",
+            L"樽霊符「バレル・ダンス」",
+            L"終宴符「ラスト・ドロップ」"
         };
         if (m_currentSpell >= 0 && m_currentSpell < 4) {
             return names[m_currentSpell];

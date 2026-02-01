@@ -101,6 +101,17 @@ void Enemy::Update(float deltaTime, int screenWidth, int screenHeight, BulletMan
                 else if (hpPercent > 0.50f) m_patternId = 4;  // Phase 2: Rainbow Spiral
                 else if (hpPercent > 0.25f) m_patternId = 2;  // Phase 3: Wave + Aimed
                 else m_patternId = 3;                          // Phase 4: Double Ring
+                
+                // 東方風ボス移動（ゆっくり左右に動く＋上下にふわふわ）
+                float moveSpeed = 80.0f;
+                float horizontalRange = 150.0f;
+                float verticalRange = 30.0f;
+                m_position.x = m_targetPosition.x + sinf(m_patternTimer * 0.5f) * horizontalRange;
+                m_position.y = m_targetPosition.y + sinf(m_patternTimer * 0.8f) * verticalRange;
+                
+                // 画面内に収める
+                if (m_position.x < m_radius) m_position.x = m_radius;
+                if (m_position.x > screenWidth - m_radius) m_position.x = screenWidth - m_radius;
             }
             
             ExecuteBulletPattern(bulletManager, playerPos);
@@ -149,22 +160,24 @@ void Enemy::Render(Graphics* graphics) {
         graphics->DrawCircle(m_position.x, m_position.y, m_radius, glowColor);
     }
 
-    // HP円グラフ（敵の周りを囲む）
-    float hpRatio = m_health / m_maxHealth;
-    float arcRadius = m_radius + 10.0f;  // 敵の少し外側
-    float thickness = m_type == EnemyType::Boss ? 6.0f : 4.0f;
-    
-    // 背景（薄いグレー）
-    graphics->DrawCircleArc(m_position.x, m_position.y, arcRadius, thickness,
-        -PI / 2.0f, 3.0f * PI / 2.0f, XMFLOAT4(0.2f, 0.2f, 0.2f, 0.5f));
-    
-    // HP表示（緑→赤のグラデーション）
-    XMFLOAT4 hpColor = hpRatio > 0.5f 
-        ? XMFLOAT4(0.2f, 0.9f, 0.4f, 1.0f)
-        : XMFLOAT4(0.9f, 0.3f, 0.2f, 1.0f);
-    float endAngle = -PI / 2.0f + hpRatio * 2.0f * PI;  // 上から時計回り
-    graphics->DrawCircleArc(m_position.x, m_position.y, arcRadius, thickness,
-        -PI / 2.0f, endAngle, hpColor);
+    // HP円グラフ（ボスのみ表示）
+    if (m_type == EnemyType::Boss) {
+        float hpRatio = m_displayHealth / m_maxHealth;  // イージング適用
+        float arcRadius = m_radius + 15.0f;  // 敵の少し外側
+        float thickness = 8.0f;
+        
+        // 背景（薄いグレー）
+        graphics->DrawCircleArc(m_position.x, m_position.y, arcRadius, thickness,
+            -PI / 2.0f, 3.0f * PI / 2.0f, XMFLOAT4(0.2f, 0.2f, 0.2f, 0.5f));
+        
+        // HP表示（緑→赤のグラデーション）
+        XMFLOAT4 hpColor = hpRatio > 0.5f 
+            ? XMFLOAT4(0.2f, 0.9f, 0.4f, 1.0f)
+            : XMFLOAT4(0.9f, 0.3f, 0.2f, 1.0f);
+        float endAngle = -PI / 2.0f + hpRatio * 2.0f * PI;  // 上から時計回り
+        graphics->DrawCircleArc(m_position.x, m_position.y, arcRadius, thickness,
+            -PI / 2.0f, endAngle, hpColor);
+    }
 }
 
 void Enemy::TakeDamage(float damage) {

@@ -42,6 +42,10 @@ void EnemyManager::Initialize(Graphics* graphics, BulletManager* bulletManager) 
     if (loader.LoadTexture(basePath + L"boss_kai.png", &srv)) {
         m_bossTexture.Attach(srv);
     }
+    srv = nullptr;
+    if (loader.LoadTexture(basePath + L"enemy_glass.png", &srv)) {
+        m_glassTexture.Attach(srv);
+    }
     
     // 初期ウェーブの生成
     SpawnWave(0);
@@ -101,6 +105,9 @@ void EnemyManager::SpawnEnemy(float x, float y, float health, int patternId, Ene
             break;
         case EnemyType::Bottle:
             if (m_bottleTexture) enemy->SetTexture(m_bottleTexture.Get());
+            break;
+        case EnemyType::Glass:
+            if (m_glassTexture) enemy->SetTexture(m_glassTexture.Get());
             break;
         case EnemyType::Boss:
             if (m_bossTexture) enemy->SetTexture(m_bossTexture.Get());

@@ -44,5 +44,6 @@ private:
     // Enemy textures
     ComPtr<ID3D11ShaderResourceView> m_barrelTexture;
     ComPtr<ID3D11ShaderResourceView> m_bottleTexture;
+    ComPtr<ID3D11ShaderResourceView> m_glassTexture;
     ComPtr<ID3D11ShaderResourceView> m_bossTexture;
 };

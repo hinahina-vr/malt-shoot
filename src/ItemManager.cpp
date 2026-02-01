@@ -117,8 +117,12 @@ void ItemManager::Render(Graphics* graphics) {
         
         // 全アイテムをテクスチャで描画
         ID3D11ShaderResourceView* texture = nullptr;
+        float sizeMultiplier = 1.0f;  // アイテムサイズ調整用
         switch (item.type) {
-            case ItemType::WhiskyShot: texture = m_whiskyTexture.Get(); break;
+            case ItemType::WhiskyShot: 
+                texture = m_whiskyTexture.Get(); 
+                sizeMultiplier = 0.5f;  // 半分サイズ
+                break;
             case ItemType::MaltGrain: texture = m_maltTexture.Get(); break;
             case ItemType::BarrelDrop: texture = m_barrelTexture.Get(); break;
             case ItemType::LabelStar: texture = m_labelTexture.Get(); break;
@@ -126,6 +130,7 @@ void ItemManager::Render(Graphics* graphics) {
             case ItemType::GoldenBottle: texture = m_bottleTexture.Get(); break;
             case ItemType::FullCask: texture = m_caskTexture.Get(); break;
         }
+        size *= sizeMultiplier;
         
         if (texture) {
             graphics->DrawTexturedSprite(

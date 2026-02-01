@@ -114,6 +114,7 @@ bool Game::Initialize(HWND hWnd, int width, int height) {
     m_isRunning = true;
     LoadHiScore();
     LoadCutinTextures();  // カットインテクスチャ読み込み
+    LoadPortraits();      // ポートレートテクスチャ読み込み
     return true;
 }
 
@@ -244,9 +245,9 @@ void Game::Update() {
             m_bulletManager->Clear();  // Clear all enemy bullets
             m_sound->PlayBomb();
             
-            // Damage all enemies
+            // Damage all enemies (ボス無敵時は除外)
             for (auto& enemy : m_enemyManager->GetEnemies()) {
-                if (enemy->IsActive()) {
+                if (enemy->IsActive() && !enemy->IsInvincible()) {
                     enemy->TakeDamage(100.0f);
                 }
             }
@@ -302,6 +303,9 @@ void Game::CheckCollisions() {
             float dist = sqrtf(dx * dx + dy * dy);
             
             if (dist < bullet.radius + enemy->GetRadius()) {
+                // ボス無敵時は弾が通過
+                if (enemy->IsInvincible()) continue;
+                
                 enemy->TakeDamage(10.0f);
                 bullet.isActive = false;
                 
@@ -401,14 +405,19 @@ void Game::Render() {
     if (m_text) {
         m_text->BeginDraw();
         
-        // UI Text labels
+        // UI Text labels (日本語化)
         float textX = static_cast<float>(PLAY_AREA_WIDTH + 20);
-        m_text->DrawTextWithValue(L"Hi-Score", m_hiScore, textX, 50);
-        m_text->DrawTextWithValue(L"Score", m_score, textX, 90);
-        m_text->DrawTextWithValue(L"Lives", m_lives, textX, 170);
-        m_text->DrawTextWithValue(L"Bombs", m_bombs, textX, 210);
-        m_text->DrawTextWithValue(L"Power", m_power, textX, 250);
-        m_text->DrawTextWithValue(L"Graze", m_graze, textX, 330);
+        m_text->DrawTextWithValue(L"ハイスコア", m_hiScore, textX, 50);
+        m_text->DrawTextWithValue(L"スコア", m_score, textX, 90);
+        
+        // プレイヤー名表示
+        const wchar_t* playerName = (m_playerCharacter == 0) ? L"★ ひなひな" : L"★ かい";
+        m_text->DrawText(playerName, textX, 130, 200, 30, 1, 1);  // ゴールド
+        
+        m_text->DrawTextWithValue(L"残機", m_lives, textX, 170);
+        m_text->DrawTextWithValue(L"ボム", m_bombs, textX, 210);
+        m_text->DrawTextWithValue(L"パワー", m_power, textX, 250);
+        m_text->DrawTextWithValue(L"グレイズ", m_graze, textX, 330);
         
         // FPS display
         wchar_t fpsBuffer[32];
@@ -423,7 +432,7 @@ void Game::Render() {
         
         // Build info
         m_text->DrawText(L"LoC: 3920", textX, static_cast<float>(PLAY_AREA_HEIGHT - 60), 200, 20, 0, 2);
-        m_text->DrawText(L"Hinata vs Hinahina", textX, static_cast<float>(PLAY_AREA_HEIGHT - 35), 200, 20, 0, 1);
+        m_text->DrawText(L"ひなた vs ひなひな", textX, static_cast<float>(PLAY_AREA_HEIGHT - 35), 200, 20, 0, 1);
         
         m_text->EndDraw();
     }
@@ -635,6 +644,16 @@ void Game::HandleDebugInput() {
         }
         gPressed = true;
     } else { gPressed = false; }
+    
+    // Press C to change character（ひなひな⇔かい）
+    static bool cPressed = false;
+    if (GetAsyncKeyState('C') & 0x8000) {
+        if (!cPressed) {
+            m_playerCharacter = (m_playerCharacter + 1) % 2;  // 0⇔1
+            // プレイヤーテクスチャを切り替え（将来実装）
+        }
+        cPressed = true;
+    } else { cPressed = false; }
 }
 
 void Game::SpawnBoss() {
@@ -898,6 +917,11 @@ float Game::GetEnemyBulletCountMultiplier() const {
 
 void Game::UpdateGameOver() {
     static bool upPressed = false, downPressed = false, zPressed = false;
+    static float gameOverTimer = 0.0f;
+    
+    // 2秒待機してからスキップ可能
+    gameOverTimer += m_deltaTime;
+    if (gameOverTimer < 2.0f) return;
     
     // Up/Down to select option
     if (GetAsyncKeyState(VK_UP) & 0x8000) {
@@ -919,10 +943,12 @@ void Game::UpdateGameOver() {
                 m_lives = 3;
                 m_bombs = 3;
                 m_gameState = GameState::Playing;
+                gameOverTimer = 0.0f;  // リセット
             } else {
                 // Return to title
                 ResetGame();
                 m_gameState = GameState::Title;
+                gameOverTimer = 0.0f;  // リセット
             }
         }
         zPressed = true;
@@ -972,12 +998,18 @@ void Game::RenderGameOver() {
 
 void Game::UpdateStageClear() {
     static bool zPressed = false;
+    static float stageClearTimer = 0.0f;
+    
+    // 2秒待機してからスキップ可能
+    stageClearTimer += m_deltaTime;
+    if (stageClearTimer < 2.0f) return;
     
     // Z to return to title
     if (GetAsyncKeyState('Z') & 0x8000) {
         if (!zPressed) {
             ResetGame();
             m_gameState = GameState::Title;
+            stageClearTimer = 0.0f;  // リセット
         }
         zPressed = true;
     } else { zPressed = false; }
@@ -1075,6 +1107,24 @@ void Game::LoadCutinTextures() {
         if (m_textureLoader->LoadTexture(texturePath, &srv)) {
             m_cutinTextures[i].Attach(srv);
         }
+    }
+}
+
+// ポートレートテクスチャ読み込み
+void Game::LoadPortraits() {
+    wchar_t exePath[MAX_PATH];
+    GetModuleFileNameW(nullptr, exePath, MAX_PATH);
+    std::wstring path(exePath);
+    size_t lastSlash = path.find_last_of(L"\\/");
+    std::wstring basePath = path.substr(0, lastSlash) + L"\\..\\..\\assets\\textures\\portraits\\";
+    
+    ID3D11ShaderResourceView* srv = nullptr;
+    if (m_textureLoader->LoadTexture(basePath + L"hinata.png", &srv)) {
+        m_portraitHinata.Attach(srv);
+    }
+    srv = nullptr;
+    if (m_textureLoader->LoadTexture(basePath + L"kai.png", &srv)) {
+        m_portraitKai.Attach(srv);
     }
 }
 
@@ -1193,11 +1243,21 @@ void Game::RenderBossDialogue() {
     m_graphics->DrawSprite(boxX, boxY + boxH - 3.0f, boxW, 3.0f, 
         DirectX::XMFLOAT4(1.0f, 0.8f, 0.3f, 1.0f));
     
-    // セリフテキスト（タイプライター効果）- フォント3倍大きく
+    // 顔イラスト（左側）- ボスはひなひな
+    float portraitSize = 180.0f;
+    if (m_portraitHinata) {
+        m_graphics->DrawTexturedSprite(boxX + 20.0f, boxY + 25.0f, portraitSize, portraitSize,
+            m_portraitHinata.Get(), DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f));
+    }
+    
+    // テキスト開始位置を右にずらす
+    float textStartX = boxX + portraitSize + 40.0f;
+    
+    // セリフテキスト - フォント大きく
     if (m_text && m_dialogueLine < g_numDialogues) {
         std::wstring displayText(g_bossDialogues[m_dialogueLine], m_dialogueCharIndex);
         m_text->BeginDraw();
-        m_text->DrawText(displayText.c_str(), boxX + 30.0f, boxY + 40.0f, boxW - 60.0f, 150.0f, 2, 0);
+        m_text->DrawText(displayText.c_str(), textStartX, boxY + 40.0f, boxW - portraitSize - 80.0f, 150.0f, 2, 0);
         
         // 次へ進むヒント
         int len = static_cast<int>(wcslen(g_bossDialogues[m_dialogueLine]));

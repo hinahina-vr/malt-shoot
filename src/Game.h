@@ -154,7 +154,11 @@ private:
     float m_dialogueCharTimer = 0.0f;  // タイプライター効果
     int m_dialogueCharIndex = 0;
     bool m_bossSpawned = false;
+    ComPtr<ID3D11ShaderResourceView> m_portraitHinata;  // ひなひな顔イラスト
+    ComPtr<ID3D11ShaderResourceView> m_portraitKai;     // かい顔イラスト
+    int m_playerCharacter = 0;  // 0=ひなひな, 1=かい
     void StartBossDialogue();
     void UpdateBossDialogue();
     void RenderBossDialogue();
+    void LoadPortraits();
 };

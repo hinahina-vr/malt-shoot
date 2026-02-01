@@ -62,15 +62,29 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         return -1;
     }
 
-    // メインループ
+    // メインループ（60FPS制限）
     MSG msg = {};
+    LARGE_INTEGER freq, lastTime, currentTime;
+    QueryPerformanceFrequency(&freq);
+    QueryPerformanceCounter(&lastTime);
+    const double targetFrameTime = 1.0 / 60.0;  // 60FPS
+    
     while (msg.message != WM_QUIT) {
         if (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE)) {
             TranslateMessage(&msg);
             DispatchMessage(&msg);
         } else {
-            game.Update();
-            game.Render();
+            QueryPerformanceCounter(&currentTime);
+            double elapsed = static_cast<double>(currentTime.QuadPart - lastTime.QuadPart) / freq.QuadPart;
+            
+            if (elapsed >= targetFrameTime) {
+                lastTime = currentTime;
+                game.Update();
+                game.Render();
+            } else {
+                // CPU負荷軽減のため少しスリープ
+                Sleep(1);
+            }
         }
     }
 

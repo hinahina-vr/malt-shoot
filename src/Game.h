@@ -113,7 +113,7 @@ private:
     // Settings menu (ESC to open)
     bool m_isPaused;
     int m_menuSelection;
-    int m_bgmVolume = 60;   // デフォルト60%
+    int m_bgmVolume = 70;   // デフォルト70%
     int m_sfxVolume = 100;
     void UpdateSettingsMenu();
     void RenderSettingsMenu();

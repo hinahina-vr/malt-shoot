@@ -77,5 +77,5 @@ private:
     bool m_initialized;
     bool m_isPlaying;
     std::wstring m_soundPath;
-    int m_volume = 600;  // デフォルト60%
+    int m_volume = 700;  // デフォルト70%
 };

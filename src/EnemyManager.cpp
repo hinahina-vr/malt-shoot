@@ -140,21 +140,27 @@ void EnemyManager::SpawnWave(int waveNumber) {
     
     switch (waveNumber % 4) {
         case 0:
-            // ウェーブ1: 中央に樽1体
-            SpawnEnemy(320.0f, 150.0f, 200.0f, 0, EnemyType::Barrel);
+            // ウェーブ1: 樽2体（2倍）
+            SpawnEnemy(220.0f, 150.0f, 200.0f, 0, EnemyType::Barrel);
+            SpawnEnemy(420.0f, 150.0f, 200.0f, 0, EnemyType::Barrel);
             break;
             
         case 1:
-            // ウェーブ2: 左右にボトル2体
-            SpawnEnemy(160.0f, 120.0f, 150.0f, 1, EnemyType::Bottle);
-            SpawnEnemy(480.0f, 120.0f, 150.0f, 1, EnemyType::Bottle);
+            // ウェーブ2: ボトル4体（2倍）
+            SpawnEnemy(100.0f, 120.0f, 150.0f, 1, EnemyType::Bottle);
+            SpawnEnemy(220.0f, 120.0f, 150.0f, 1, EnemyType::Bottle);
+            SpawnEnemy(420.0f, 120.0f, 150.0f, 1, EnemyType::Bottle);
+            SpawnEnemy(540.0f, 120.0f, 150.0f, 1, EnemyType::Bottle);
             break;
             
         case 2:
-            // ウェーブ3: 混合3体
-            SpawnEnemy(320.0f, 100.0f, 300.0f, 2, EnemyType::Glass);
-            SpawnEnemy(160.0f, 180.0f, 100.0f, 0, EnemyType::Barrel);
-            SpawnEnemy(480.0f, 180.0f, 100.0f, 0, EnemyType::Barrel);
+            // ウェーブ3: 混合6体（2倍）
+            SpawnEnemy(220.0f, 100.0f, 300.0f, 2, EnemyType::Glass);
+            SpawnEnemy(420.0f, 100.0f, 300.0f, 2, EnemyType::Glass);
+            SpawnEnemy(100.0f, 180.0f, 100.0f, 0, EnemyType::Barrel);
+            SpawnEnemy(260.0f, 180.0f, 100.0f, 0, EnemyType::Barrel);
+            SpawnEnemy(380.0f, 180.0f, 100.0f, 0, EnemyType::Barrel);
+            SpawnEnemy(540.0f, 180.0f, 100.0f, 0, EnemyType::Barrel);
             break;
             
         case 3:

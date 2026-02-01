@@ -1,4 +1,4 @@
-#include "Enemy.h"
+﻿#include "Enemy.h"
 #include "Graphics.h"
 #include "BulletManager.h"
 #include <cmath>

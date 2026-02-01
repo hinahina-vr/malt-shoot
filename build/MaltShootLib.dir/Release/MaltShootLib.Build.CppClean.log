@@ -1,3 +1,6 @@
+c:\users\wdddi\workspace\malt-shoot\build\maltshootlib.dir\release\itemmanager.obj
+c:\users\wdddi\workspace\malt-shoot\build\maltshootlib.dir\release\particlesystem.obj
+c:\users\wdddi\workspace\malt-shoot\build\maltshootlib.dir\release\background3d.obj
 c:\users\wdddi\workspace\malt-shoot\build\maltshootlib.dir\release\enemymanager.obj
 c:\users\wdddi\workspace\malt-shoot\build\maltshootlib.dir\release\enemy.obj
 c:\users\wdddi\workspace\malt-shoot\build\maltshootlib.dir\release\bulletmanager.obj
@@ -5,9 +8,6 @@ c:\users\wdddi\workspace\malt-shoot\build\maltshootlib.dir\release\player.obj
 c:\users\wdddi\workspace\malt-shoot\build\maltshootlib.dir\release\input.obj
 c:\users\wdddi\workspace\malt-shoot\build\maltshootlib.dir\release\graphics.obj
 c:\users\wdddi\workspace\malt-shoot\build\maltshootlib.dir\release\game.obj
-c:\users\wdddi\workspace\malt-shoot\build\maltshootlib.dir\release\background3d.obj
-c:\users\wdddi\workspace\malt-shoot\build\maltshootlib.dir\release\particlesystem.obj
-c:\users\wdddi\workspace\malt-shoot\build\maltshootlib.dir\release\itemmanager.obj
 c:\users\wdddi\workspace\malt-shoot\build\cmakefiles\generate.stamp
 c:\users\wdddi\workspace\malt-shoot\build\release\maltshootlib.lib
 c:\users\wdddi\workspace\malt-shoot\build\maltshootlib.dir\release\maltshootlib.tlog\cl.command.1.tlog

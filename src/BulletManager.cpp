@@ -1,4 +1,4 @@
-#include "BulletManager.h"
+﻿#include "BulletManager.h"
 #include "Graphics.h"
 #include "TextureLoader.h"
 #include <cmath>

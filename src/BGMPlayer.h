@@ -22,11 +22,19 @@ public:
     }
 
     void PlayStageBGM() {
-        PlayBGM(L"bgm_stage.mp3");
+        PlayBGM(L"bgm_stage1_normal.mp3");
     }
 
     void PlayBossBGM() {
-        PlayBGM(L"bgm_boss.mp3");
+        PlayBGM(L"bgm_stage1_boss.mp3");
+    }
+
+    void PlayTitleBGM() {
+        PlayBGM(L"bgm_op.mp3");
+    }
+
+    void PlayScoreBGM() {
+        PlayBGM(L"bgm_ed.mp3");
     }
 
     void Stop() {
@@ -55,8 +63,8 @@ private:
         MCIERROR err = mciSendStringW(openCmd.c_str(), nullptr, 0, nullptr);
         if (err != 0) return;
         
-        // Set volume to 5%
-        mciSendStringW(L"setaudio bgm volume to 50", nullptr, 0, nullptr);
+        // Set volume to 100%
+        mciSendStringW(L"setaudio bgm volume to 1000", nullptr, 0, nullptr);
         
         // Play with repeat
         mciSendStringW(L"play bgm repeat", nullptr, 0, nullptr);

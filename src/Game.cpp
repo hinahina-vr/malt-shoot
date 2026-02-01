@@ -89,7 +89,7 @@ bool Game::Initialize(HWND hWnd, int width, int height) {
 
     m_bgm = std::make_unique<BGMPlayer>();
     m_bgm->Initialize();
-    m_bgm->PlayStageBGM();
+    m_bgm->PlayTitleBGM();  // タイトル画面BGM
 
     // Initialize text renderer with swap chain
     m_text = std::make_unique<TextRenderer>();
@@ -136,6 +136,7 @@ void Game::Shutdown() {
 
 void Game::Update() {
     UpdateDeltaTime();
+    UpdateFade();  // フェード処理
     m_input->Update();
     
     // Handle game state
@@ -156,7 +157,7 @@ void Game::Update() {
             return;
         case GameState::VictoryDialogue:
             UpdateVictoryDialogue();
-            break;  // 背景更新を継続するためreturnではなくbreak
+            return;  // 後続処理をスキップ
     }
     
     // ESC to toggle pause/settings menu
@@ -484,6 +485,9 @@ void Game::Render() {
     if (m_gameState == GameState::VictoryDialogue) {
         RenderVictoryDialogue();
     }
+
+    // フェード効果を最後に描画
+    RenderFade();
 
     m_graphics->EndFrame();
 }
@@ -875,6 +879,80 @@ void Game::RenderSettingsMenu() {
     }
 }
 
+void Game::UpdateFade() {
+    const float fadeSpeed = 2.0f;  // 0.5秒でフェード完了
+    
+    if (m_fadeIn) {
+        m_fadeAlpha -= fadeSpeed * m_deltaTime;
+        if (m_fadeAlpha <= 0.0f) {
+            m_fadeAlpha = 0.0f;
+            m_fadeIn = false;
+        }
+    }
+    
+    if (m_fadeOut) {
+        m_fadeAlpha += fadeSpeed * m_deltaTime;
+        if (m_fadeAlpha >= 1.0f) {
+            m_fadeAlpha = 1.0f;
+            m_fadeOut = false;
+            m_fadeIn = true;  // 次の画面でフェードイン
+            m_gameState = m_nextState;
+            
+            // 状態に応じてBGM切り替え
+            if (m_nextState == GameState::Playing) {
+                ResetGame();
+            } else if (m_nextState == GameState::Title) {
+                if (m_bgm) m_bgm->PlayTitleBGM();
+            }
+        }
+    }
+}
+
+void Game::RenderFade() {
+    if (m_fadeAlpha > 0.001f) {
+        m_graphics->DrawSprite(0, 0, static_cast<float>(m_width), static_cast<float>(m_height),
+            DirectX::XMFLOAT4(0.0f, 0.0f, 0.0f, m_fadeAlpha));
+    }
+}
+
+void Game::ResetGame() {
+    // プレイヤー初期化
+    m_player->SetPosition(static_cast<float>(PLAY_AREA_WIDTH / 2), static_cast<float>(PLAY_AREA_HEIGHT - 100));
+    m_player->SetPower(0);
+    m_player->SetEvolutionLevel(0);
+    
+    // 弾クリア
+    m_bulletManager->Clear();
+    
+    // 敵クリアとウェーブリセット
+    m_enemyManager->Clear();
+    m_enemyManager->ResetWaves();
+    
+    // アイテムクリア
+    m_items->Clear();
+    
+    // パーティクルクリア
+    m_particles->Clear();
+    
+    // ゲーム状態リセット
+    m_score = 0;
+    m_lives = 3;
+    m_bombs = 3;
+    m_graze = 0;
+    m_specialGauge = 0.0f;
+    m_bossMode = false;
+    m_bossDialogueActive = false;
+    m_waitingForBoss = false;
+    m_bossSpawnDelay = 0.0f;
+    m_victoryDialogueTimer = 0.0f;
+    m_victoryDialogueLine = 0;
+    
+    // BGMをステージBGMに切り替え
+    if (m_bgm) {
+        m_bgm->PlayStageBGM();
+    }
+}
+
 void Game::UpdateTitle() {
     static bool zPressed = false, leftPressed = false, rightPressed = false;
     
@@ -882,6 +960,7 @@ void Game::UpdateTitle() {
     if (GetAsyncKeyState(VK_LEFT) & 0x8000) {
         if (!leftPressed) {
             m_titleSelection = (m_titleSelection - 1 + 3) % 3;
+            if (m_sound) m_sound->PlayCursor();
         }
         leftPressed = true;
     } else { leftPressed = false; }
@@ -889,15 +968,18 @@ void Game::UpdateTitle() {
     if (GetAsyncKeyState(VK_RIGHT) & 0x8000) {
         if (!rightPressed) {
             m_titleSelection = (m_titleSelection + 1) % 3;
+            if (m_sound) m_sound->PlayCursor();
         }
         rightPressed = true;
     } else { rightPressed = false; }
     
-    // Z key to start game with selected difficulty
+    // Z key to start game with selected difficulty (フェードアウト開始)
     if (GetAsyncKeyState('Z') & 0x8000) {
-        if (!zPressed) {
+        if (!zPressed && !m_fadeOut) {
+            if (m_sound) m_sound->PlayConfirm();  // 決定音
             m_difficulty = static_cast<Difficulty>(m_titleSelection);
-            m_gameState = GameState::Playing;
+            m_nextState = GameState::Playing;
+            m_fadeOut = true;  // フェードアウト開始
         }
         zPressed = true;
     } else { zPressed = false; }
@@ -1120,21 +1202,21 @@ void Game::UpdateVictoryDialogue() {
     
     m_victoryDialogueTimer += m_deltaTime;
     
-    // 3秒間セリフ表示後、StageClearへ
-    if (m_victoryDialogueTimer > 3.0f) {
+    // 5秒間セリフ表示後、StageClearへ
+    if (m_victoryDialogueTimer > 5.0f) {
         m_gameState = GameState::StageClear;
+        return;
     }
     
-    // Zキーでスキップ（1秒後から有効、押しっぱなし無効）
-    static bool zWasPressed = true;  // 最初はtrue（押しっぱなし対策）
-    bool zNowPressed = (GetAsyncKeyState('Z') & 0x8000) != 0;
-    
+    // Zキー or ENTERキーでスキップ（1秒後から有効）
     if (m_victoryDialogueTimer > 1.0f) {
-        if (zNowPressed && !zWasPressed) {
+        bool zPressed = (GetAsyncKeyState('Z') & 0x8000) != 0;
+        bool enterPressed = (GetAsyncKeyState(VK_RETURN) & 0x8000) != 0;
+        
+        if (zPressed || enterPressed) {
             m_gameState = GameState::StageClear;
         }
     }
-    zWasPressed = zNowPressed;
 }
 
 void Game::RenderVictoryDialogue() {
@@ -1171,24 +1253,6 @@ void Game::RenderVictoryDialogue() {
     m_text->EndDraw();
 }
 
-void Game::ResetGame() {
-    m_score = 0;
-    m_lives = 3;
-    m_bombs = 3;
-    m_power = 0;
-    m_graze = 0;
-    m_combo = 0;
-    m_specialGauge = 0;
-    m_specialReady = false;
-    m_continueCount = 3;
-    m_bossMode = false;
-    m_bulletManager->Clear();
-    m_items->Clear();
-    m_enemyManager->Clear();
-    m_enemyManager->ResetWaves();
-    m_enemyManager->SpawnWave(0);
-    m_player->SetPosition(PLAY_AREA_WIDTH / 2.0f, PLAY_AREA_HEIGHT - 100.0f);
-}
 
 void Game::SaveHiScore() {
     std::ofstream file("hiscore.dat", std::ios::binary);

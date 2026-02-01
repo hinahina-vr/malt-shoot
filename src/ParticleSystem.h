@@ -25,6 +25,7 @@ public:
     void Initialize(int maxParticles = 500);
     void Update(float deltaTime);
     void Render(Graphics* graphics);
+    void Clear() { for (auto& p : m_particles) p.isActive = false; }
 
     // Explosion effect when enemy dies
     void SpawnExplosion(float x, float y, XMFLOAT4 color, int count = 30);

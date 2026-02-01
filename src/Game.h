@@ -68,6 +68,14 @@ private:
     float m_fpsTimer;
     float m_currentFPS;
 
+    // フェード効果
+    float m_fadeAlpha = 1.0f;       // 0=透明, 1=真っ黒
+    bool m_fadeIn = true;           // フェードイン中
+    bool m_fadeOut = false;         // フェードアウト中
+    GameState m_nextState;          // フェードアウト後の遷移先
+    void UpdateFade();
+    void RenderFade();
+
     void UpdateDeltaTime();
     void RenderUI();
     void CheckCollisions();
@@ -113,6 +121,7 @@ private:
     ComPtr<ID3D11ShaderResourceView> m_titleTexture;
     void UpdateTitle();
     void RenderTitle();
+    void ResetGame();  // ゲーム状態の初期化
     
     // Difficulty
     Difficulty m_difficulty;
@@ -129,7 +138,6 @@ private:
     void RenderStageClear();
     void UpdateVictoryDialogue();
     void RenderVictoryDialogue();
-    void ResetGame();
     
     // ハイスコア保存
     void SaveHiScore();

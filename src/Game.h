@@ -161,4 +161,7 @@ private:
     void UpdateBossDialogue();
     void RenderBossDialogue();
     void LoadPortraits();
+    
+    // ステージクリアイラスト
+    ComPtr<ID3D11ShaderResourceView> m_stageClearTexture;
 };

@@ -870,26 +870,26 @@ void Game::RenderTitle() {
     if (m_text) {
         m_text->BeginDraw();
         
-        // Difficulty selection
-        const wchar_t* difficulties[] = { L"Easy", L"Normal", L"Hard" };
+        // Difficulty selection（日本語化）
+        const wchar_t* difficulties[] = { L"かんたん", L"ふつう", L"むずい" };
         float diffY = m_height - 280.0f;
         float centerX = m_width / 2.0f;
         
         for (int i = 0; i < 3; i++) {
-            float x = centerX - 150.0f + i * 120.0f;
+            float x = centerX - 170.0f + i * 140.0f;
             int colorType = (i == m_titleSelection) ? 1 : 0;  // Gold for selected, white otherwise
-            m_text->DrawText(difficulties[i], x, diffY, 100, 40, 2, colorType);
+            m_text->DrawText(difficulties[i], x, diffY, 120, 40, 2, colorType);
         }
         
         // Selection arrows
-        m_text->DrawText(L"< ", centerX - 180.0f, diffY, 30, 40, 2, 1);
-        m_text->DrawText(L" >", centerX + 150.0f, diffY, 30, 40, 2, 1);
+        m_text->DrawText(L"◀", centerX - 220.0f, diffY, 40, 40, 2, 1);
+        m_text->DrawText(L"▶", centerX + 200.0f, diffY, 40, 40, 2, 1);
         
-        // "Press Z to Start" fading text - centered
+        // "Press Z to Start" fading text - centered（日本語化）
         float time = static_cast<float>(GetTickCount64()) * 0.003f;
         float alpha = (sinf(time) + 1.0f) * 0.5f;
         
-        std::wstring startText = L"Press Z to Start";
+        std::wstring startText = L"Zキーでスタート";
         float textWidth = static_cast<float>(m_width);  // 画面幅全体
         float textX = 0.0f;  // 左端から
         float textY = m_height - 180.0f;
@@ -1018,9 +1018,15 @@ void Game::UpdateStageClear() {
 }
 
 void Game::RenderStageClear() {
-    // Dark overlay with golden tint
-    m_graphics->DrawSprite(0, 0, static_cast<float>(m_width), static_cast<float>(m_height),
-        DirectX::XMFLOAT4(0.1f, 0.08f, 0.0f, 0.8f));
+    // ステージクリアイラストを背景として表示（フルスクリーン）
+    if (m_stageClearTexture) {
+        m_graphics->DrawTexturedSprite(0, 0, static_cast<float>(m_width), static_cast<float>(m_height),
+            m_stageClearTexture.Get(), DirectX::XMFLOAT4(1, 1, 1, 1));
+    } else {
+        // フォールバック：ゴールドのオーバーレイ
+        m_graphics->DrawSprite(0, 0, static_cast<float>(m_width), static_cast<float>(m_height),
+            DirectX::XMFLOAT4(0.1f, 0.08f, 0.0f, 0.8f));
+    }
     
     m_graphics->GetContext()->Flush();
     
@@ -1030,23 +1036,23 @@ void Game::RenderStageClear() {
         float centerX = m_width / 2.0f;
         float centerY = m_height / 2.0f;
         
-        // Stage Clear text
-        m_text->DrawText(L"STAGE CLEAR!", centerX - 180, centerY - 120, 360, 60, 3, 1);
+        // Stage Clear text（日本語化）
+        m_text->DrawText(L"ステージクリア！", centerX - 200, centerY - 150, 400, 70, 3, 1);
         
         // Final score
         wchar_t scoreText[64];
-        swprintf_s(scoreText, L"Score: %d", m_score);
-        m_text->DrawText(scoreText, centerX - 100, centerY - 20, 200, 40, 2, 0);
+        swprintf_s(scoreText, L"スコア: %d", m_score);
+        m_text->DrawText(scoreText, centerX - 120, centerY - 40, 240, 40, 2, 0);
         
         // Hi-Score
         if (m_score >= m_hiScore) {
-            m_text->DrawText(L"NEW HIGH SCORE!", centerX - 120, centerY + 30, 240, 40, 2, 1);
+            m_text->DrawText(L"★ ハイスコア更新！ ★", centerX - 150, centerY + 20, 300, 40, 2, 1);
         }
         
-        // Press Z to continue
+        // Press Z to continue（日本語化）
         float time = static_cast<float>(GetTickCount64()) * 0.003f;
         float alpha = (sinf(time) + 1.0f) * 0.5f;
-        m_text->DrawTextWithAlpha(L"Press Z", centerX - 80, centerY + 100, 160, 40, 2, 0, alpha);
+        m_text->DrawTextWithAlpha(L"Zキーでタイトルへ", centerX - 130, centerY + 100, 260, 40, 2, 0, alpha);
         
         m_text->EndDraw();
     }
@@ -1128,6 +1134,13 @@ void Game::LoadPortraits() {
     if (m_textureLoader->LoadTexture(basePath + L"kai.png", &srv)) {
         m_portraitKai.Attach(srv);
     }
+    
+    // ステージクリアイラスト読み込み
+    std::wstring uiPath = path.substr(0, lastSlash) + L"\\..\\..\\assets\\textures\\ui\\";
+    srv = nullptr;
+    if (m_textureLoader->LoadTexture(uiPath + L"stage_clear.png", &srv)) {
+        m_stageClearTexture.Attach(srv);
+    }
 }
 
 // カットイン更新（毎フレーム呼び出し）
@@ -1143,6 +1156,11 @@ void Game::UpdateCutin() {
                 
                 // スペルカード切り替え時に敵弾消し
                 m_bulletManager->Clear();
+                
+                // スペルカード切り替えSE
+                if (m_sound) {
+                    m_sound->PlayEnemyDestroy();  // スペル切替時に派手な音
+                }
             }
         }
     }

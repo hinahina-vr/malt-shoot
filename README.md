@@ -47,4 +47,6 @@ cmake --build build --config Release --target MaltShoot
 
 ---
 
+📊 **LoC: 5,081行** (C++ソースコード)
+
 🥃 **Cheers!** 乾杯！

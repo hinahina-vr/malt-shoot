@@ -195,30 +195,27 @@ void Game::Update() {
         m_enemyManager->ClearBossWaveStartFlag();
     }
     
-    // 10体撃破でボス登場
+    // 10体撃破でボス登場（雑魚を即全滅させる）
     if (!m_bossMode && !m_waitingForBoss && m_killCount >= 10) {
         m_waitingForBoss = true;
         m_bossSpawnDelay = 0.0f;
+        // 雑魚敵を全滅させる
+        m_enemyManager->ClearNonBossEnemies();
     }
     
-    // ボス登場前：雑魚が全滅してから2秒ディレイ処理
+    // ボス登場前：2秒ディレイ処理
     if (m_waitingForBoss) {
-        // 雑魚敵がまだいる場合は待機
-        if (m_enemyManager->HasActiveEnemies()) {
-            m_bossSpawnDelay = 0.0f;  // 雑魚がいる間はタイマーリセット
-        } else {
-            m_bossSpawnDelay += m_deltaTime;
-            if (m_bossSpawnDelay >= 2.0f) {  // 雑魚全滅から2秒後
-                m_waitingForBoss = false;
-                m_bossMode = true;
-                m_bgm->Stop();
-                m_bgm->PlayBossBGM();
-                
-                // ボスをスポーン！
-                m_enemyManager->SpawnEnemy(320.0f, 150.0f, 500.0f, 3, EnemyType::Boss);
-                
-                StartBossDialogue();
-            }
+        m_bossSpawnDelay += m_deltaTime;
+        if (m_bossSpawnDelay >= 2.0f) {  // 2秒後にボス登場
+            m_waitingForBoss = false;
+            m_bossMode = true;
+            m_bgm->Stop();
+            m_bgm->PlayBossBGM();
+            
+            // ボスをスポーン！
+            m_enemyManager->SpawnEnemy(320.0f, 150.0f, 500.0f, 3, EnemyType::Boss);
+            
+            StartBossDialogue();
         }
     }
     
@@ -242,6 +239,30 @@ void Game::Update() {
     m_bulletManager->Update(m_deltaTime, PLAY_AREA_WIDTH, PLAY_AREA_HEIGHT);
     m_particles->Update(m_deltaTime);
     m_items->Update(m_deltaTime, m_player->GetPosition(), PLAY_AREA_WIDTH, PLAY_AREA_HEIGHT);
+    
+    // ボス周りの禍々しいパーティクル（人魂風）
+    if (m_bossMode) {
+        for (const auto& enemy : m_enemyManager->GetEnemies()) {
+            if (enemy->IsBoss() && enemy->IsActive()) {
+                DirectX::XMFLOAT2 bossPos = enemy->GetPosition();
+                static float particleTimer = 0.0f;
+                particleTimer += m_deltaTime;
+                if (particleTimer >= 0.08f) {  // 80msごとに発生
+                    particleTimer = 0.0f;
+                    // ランダムな位置に人魂パーティクル
+                    float angle = static_cast<float>(rand()) / RAND_MAX * 6.28318f;
+                    float radius = 70.0f + static_cast<float>(rand()) / RAND_MAX * 50.0f;
+                    float px = bossPos.x + cosf(angle) * radius;
+                    float py = bossPos.y + sinf(angle) * radius;
+                    // 紫/赤の禍々しい色
+                    float r = 0.6f + static_cast<float>(rand()) / RAND_MAX * 0.4f;
+                    float g = 0.0f + static_cast<float>(rand()) / RAND_MAX * 0.2f;
+                    float b = 0.4f + static_cast<float>(rand()) / RAND_MAX * 0.4f;
+                    m_particles->SpawnTrail(px, py, DirectX::XMFLOAT4(r, g, b, 0.8f));
+                }
+            }
+        }
+    }
 
     // Graze system
     UpdateGraze();
@@ -1439,7 +1460,7 @@ static const wchar_t* g_bossDialogues[] = {
     L"かい「旧Aoを除霊しにいくわよ」",
     L"ひなひな「やだねえ」",
     L"かい「はあ」",
-    L"ひなひな「こんなに汁が沢山発生して、ドンキーコングできるんだから、もうこのままでいいねえ」",
+    L"ひなひな「ここで一生汁まみれになってドンキーコングでエーヤオ」",
     L"かい「おやりになってますわね」",
     L"ひなひな「かいさんだからって通すわけにはいかないねえ」"
 };

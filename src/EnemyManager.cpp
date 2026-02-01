@@ -187,6 +187,17 @@ bool EnemyManager::HasActiveEnemies() const {
     return false;
 }
 
+// 雑魚敵を全滅させる（ボス登場時）
+void EnemyManager::ClearNonBossEnemies() {
+    m_enemies.erase(
+        std::remove_if(m_enemies.begin(), m_enemies.end(),
+            [](const std::unique_ptr<Enemy>& e) {
+                return !e->IsBoss();
+            }),
+        m_enemies.end()
+    );
+}
+
 void EnemyManager::DamageBoss(float damage) {
     for (auto& enemy : m_enemies) {
         if (enemy->IsActive() && enemy->GetType() == EnemyType::Boss) {

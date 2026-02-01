@@ -33,6 +33,7 @@ public:
     void ResetWaves() { m_currentWave = 0; m_waveTimer = 0.0f; m_bossWaveJustStarted = false; }
     bool DidBossWaveJustStart() const { return m_bossWaveJustStarted; }
     void ClearBossWaveStartFlag() { m_bossWaveJustStarted = false; }
+    void ClearNonBossEnemies();  // 雑魚敵を全滅させる
     void DamageBoss(float damage);  // デバッグ用ボスダメージ
 
 private:

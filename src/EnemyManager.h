@@ -48,6 +48,7 @@ private:
     ComPtr<ID3D11ShaderResourceView> m_barrelTexture;
     ComPtr<ID3D11ShaderResourceView> m_bottleTexture;
     ComPtr<ID3D11ShaderResourceView> m_glassTexture;
+    ComPtr<ID3D11ShaderResourceView> m_fairyTexture;
     ComPtr<ID3D11ShaderResourceView> m_bossTexture;
     ComPtr<ID3D11ShaderResourceView> m_bossFrames[3];  // ボスアニメーション用3フレーム
 };

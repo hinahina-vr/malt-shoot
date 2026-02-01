@@ -33,7 +33,7 @@ Game::Game()
     , m_bossMode(false)
     , m_isPaused(false)
     , m_menuSelection(0)
-    , m_bgmVolume(10)
+    , m_bgmVolume(50)
     , m_sfxVolume(100)
     , m_gameState(GameState::Title)
     , m_difficulty(Difficulty::Ume)
@@ -89,7 +89,7 @@ bool Game::Initialize(HWND hWnd, int width, int height) {
 
     m_bgm = std::make_unique<BGMPlayer>();
     m_bgm->Initialize();
-    m_bgm->SetVolume(m_bgmVolume * 10);  // 75%で初期化
+    m_bgm->SetVolume(m_bgmVolume * 10);  // 50%で初期化
     m_bgm->PlayTitleBGM();  // タイトル画面BGM
 
     // Initialize text renderer with swap chain
@@ -175,12 +175,18 @@ void Game::Update() {
     
     HandleDebugInput();  // B=Boss, R=Reset, P=Power, G=Gauge
     
-    // ボス会話中も背景は更新継続
+    // ボス会話中もゲーム継続（弾は消える、アイテムは自動吸収）
     if (m_bossDialogueActive) {
-        m_background->Update(m_deltaTime);
-        m_particles->Update(m_deltaTime);
+        m_bulletManager->Clear();  // 敵弾消去
+        // アイテム全回収
+        auto collected = m_items->CollectItems(m_player->GetPosition(), 9999.0f, true);
+        if (collected.power > 0) {
+            m_player->AddPower(collected.power);
+        }
+        m_power = m_player->GetPower();
+        m_score += collected.points;
         UpdateBossDialogue();
-        return;  // ゲームロジックはスキップ
+        // ゲームはreturnせず継続！
     }
     
     m_background->Update(m_deltaTime);
@@ -193,8 +199,8 @@ void Game::Update() {
         m_enemyManager->ClearBossWaveStartFlag();
     }
     
-    // 10体撃破でボス登場（雑魚を即全滅させる）
-    if (!m_bossMode && !m_waitingForBoss && m_killCount >= 10) {
+    // 50体撃破でボス登場（雑魚を即全滅させる）
+    if (!m_bossMode && !m_waitingForBoss && m_killCount >= 50) {
         m_waitingForBoss = true;
         m_bossSpawnDelay = 0.0f;
         // 雑魚敵を全滅させる
@@ -211,18 +217,19 @@ void Game::Update() {
             m_bgm->PlayBossBGM();
             
             // ボスをスポーン！
-            m_enemyManager->SpawnEnemy(320.0f, 150.0f, 1500.0f, 3, EnemyType::Boss);
+            m_enemyManager->SpawnEnemy(320.0f, 150.0f, 3000.0f, 3, EnemyType::Boss);
             
             StartBossDialogue();
         }
     }
     
     // ボス撃破時→勝利セリフ→ステージクリア
-    if (m_enemyManager->IsBossWave() && m_enemyManager->AllEnemiesDead()) {
+    if (m_bossMode && m_enemyManager->AllEnemiesDead()) {
         if (m_score > m_hiScore) m_hiScore = m_score;
         m_victoryDialogueTimer = 0.0f;
         m_victoryDialogueLine = 0;
         m_gameState = GameState::VictoryDialogue;
+        m_bossMode = false;  // ボスモード終了
     }
     
     // ホーミング用に敵の位置をBulletManagerに渡す
@@ -681,73 +688,9 @@ void Game::UpdateDeltaTime() {
 }
 
 void Game::HandleDebugInput() {
-    static bool bPressed = false, rPressed = false, pPressed = false, gPressed = false;
-    
-    // Press B to spawn boss
-    if (GetAsyncKeyState('B') & 0x8000) {
-        if (!bPressed) {
-            SpawnBoss();
-        }
-        bPressed = true;
-    } else { bPressed = false; }
-    
-    // Press R to reset game
-    if (GetAsyncKeyState('R') & 0x8000) {
-        if (!rPressed) {
-            m_score = 0;
-            m_lives = 3;
-            m_bombs = 3;
-            m_power = 0;
-            m_specialGauge = 0;
-            m_combo = 0;
-            m_graze = 0;
-            m_bulletManager->Clear();
-            m_items->Clear();
-            m_bossMode = false;
-        }
-        rPressed = true;
-    } else { rPressed = false; }
-    
-    // Press P for evolution level up（装備進化）
-    if (GetAsyncKeyState('P') & 0x8000) {
-        if (!pPressed) {
-            int currentLevel = m_player->GetEvolutionLevel();
-            if (currentLevel < 4) {
-                m_player->SetEvolutionLevel(currentLevel + 1);
-            }
-        }
-        pPressed = true;
-    } else { pPressed = false; }
-    
-    // Press G to fill special gauge
-    if (GetAsyncKeyState('G') & 0x8000) {
-        if (!gPressed) {
-            m_specialGauge = m_maxSpecialGauge;
-            m_specialReady = true;
-        }
-        gPressed = true;
-    } else { gPressed = false; }
-    
-    // Press K to damage boss (one spell card)
-    static bool kPressed = false;
-    if (GetAsyncKeyState('K') & 0x8000) {
-        if (!kPressed && m_bossMode) {
-            // ボスに大ダメージ（スペルカード1枚分）
-            m_enemyManager->DamageBoss(100.0f);
-        }
-        kPressed = true;
-    } else { kPressed = false; }
-    
-    // Press C to change character（ひなひな⇔かい）
-    static bool cPressed = false;
-    if (GetAsyncKeyState('C') & 0x8000) {
-        if (!cPressed) {
-            m_playerCharacter = (m_playerCharacter + 1) % 2;  // 0⇔1
-            // プレイヤーテクスチャを切り替え（将来実装）
-        }
-        cPressed = true;
-    } else { cPressed = false; }
+    // デバッグキー削除済み（リリース版）
 }
+
 
 void Game::SpawnBoss() {
     m_bossMode = true;
@@ -760,7 +703,7 @@ void Game::SpawnBoss() {
     m_bgm->PlayBossBGM();
     
     // 最終ボス「ひなひな」を生成（体力800、4スペルカード完備）
-    m_enemyManager->SpawnEnemy(PLAY_AREA_WIDTH / 2.0f, 150.0f, 2400.0f, 0, EnemyType::Boss);
+    m_enemyManager->SpawnEnemy(PLAY_AREA_WIDTH / 2.0f, 150.0f, 4800.0f, 0, EnemyType::Boss);
     
     // ボス会話開始！
     StartBossDialogue();
@@ -1048,21 +991,21 @@ void Game::RenderTitle() {
         float centerX = m_width / 2.0f;
         
         // 影を描画してから本体を描画（視認性向上）
-        float shadowOffset = 3.0f;
+        float shadowOffset = 4.0f;
         for (int i = 0; i < 5; i++) {
-            float x = centerX - 280.0f + i * 115.0f;
+            float x = centerX - 400.0f + i * 165.0f;  // 間隔広く
             // 影（黒）
-            m_text->DrawText(difficulties[i], x + shadowOffset, diffY + shadowOffset, 100, 40, 2, 2);  // colorType 2 = black
+            m_text->DrawText(difficulties[i], x + shadowOffset, diffY + shadowOffset, 150, 60, 3, 2);  // サイズ3で2倍
             // 本体
             int colorType = (i == m_titleSelection) ? 1 : 0;  // Gold for selected, white otherwise
-            m_text->DrawText(difficulties[i], x, diffY, 100, 40, 2, colorType);
+            m_text->DrawText(difficulties[i], x, diffY, 150, 60, 3, colorType);
         }
         
-        // Selection arrows（影付き）
-        m_text->DrawText(L"◀", centerX - 330.0f + shadowOffset, diffY + shadowOffset, 40, 40, 2, 2);
-        m_text->DrawText(L"◀", centerX - 330.0f, diffY, 40, 40, 2, 1);
-        m_text->DrawText(L"▶", centerX + 290.0f + shadowOffset, diffY + shadowOffset, 40, 40, 2, 2);
-        m_text->DrawText(L"▶", centerX + 290.0f, diffY, 40, 40, 2, 1);
+        // Selection arrows（影付き・大きく）
+        m_text->DrawText(L"◀", centerX - 470.0f + shadowOffset, diffY + shadowOffset, 60, 60, 3, 2);
+        m_text->DrawText(L"◀", centerX - 470.0f, diffY, 60, 60, 3, 1);
+        m_text->DrawText(L"▶", centerX + 420.0f + shadowOffset, diffY + shadowOffset, 60, 60, 3, 2);
+        m_text->DrawText(L"▶", centerX + 420.0f, diffY, 60, 60, 3, 1);
         
         // "Press Z to Start" fading text - centered（日本語化・影付き）
         float time = static_cast<float>(GetTickCount64()) * 0.003f;
@@ -1464,17 +1407,17 @@ void Game::RenderCutin() {
 
 // Boss dialogue (Hinahina vs Kai - Touhou style)
 static const wchar_t* g_bossDialogues[] = {
-    L"ひなひな「だれ？」",
-    L"かい「おや、ひなひなさんじゃありませんか」",
-    L"ひなひな「すごいよかいさん、汁まみれだよ」",
-    L"かい「ええ　旧Aoの怨念で汁が大量発生しているわ」",
-    L"ひなひな「平将門みたいだねえ」",
-    L"かい「旧Aoを除霊しにいくわよ」",
-    L"ひなひな「やだねえ」",
-    L"かい「はあ」",
-    L"ひなひな「ここで一生汁まみれになってドンキーコングでエーヤオ」",
-    L"かい「おやりになってますわね」",
-    L"ひなひな「かいさんだからって通すわけにはいかないねえ」"
+    L"【ひなひな】\nだれ？",
+    L"【かい】\nおや、ひなひなさんじゃありませんか",
+    L"【ひなひな】\nすごいよかいさん、汁まみれだよ",
+    L"【かい】\nええ　旧Aoの怨念で汁が大量発生しているわ",
+    L"【ひなひな】\n平将門みたいだねえ",
+    L"【かい】\n旧Aoを除霊しにいくわよ",
+    L"【ひなひな】\nやだねえ",
+    L"【かい】\nはあ",
+    L"【ひなひな】\nここで一生汁まみれになってドンキーコングでエーヤオ",
+    L"【かい】\nおやりになってますわね",
+    L"【ひなひな】\nかいさんだからって通すわけにはいかないねえ"
 };
 static const int g_numDialogues = 11;
 
@@ -1551,7 +1494,7 @@ void Game::RenderBossDialogue() {
     // 顔イラスト（左側）- セリフに応じてひなひな/かい切替
     float portraitSize = 180.0f;
     bool isKaiSpeaking = (m_dialogueLine < g_numDialogues) && 
-        (wcsstr(g_bossDialogues[m_dialogueLine], L"かい「") != nullptr);
+        (wcsstr(g_bossDialogues[m_dialogueLine], L"【かい】") != nullptr);
     
     if (isKaiSpeaking && m_portraitKai) {
         m_graphics->DrawTexturedSprite(boxX + 20.0f, boxY + 25.0f, portraitSize, portraitSize,
@@ -1564,11 +1507,11 @@ void Game::RenderBossDialogue() {
     // テキスト開始位置を左寄せに
     float textStartX = boxX + portraitSize + 30.0f;
     
-    // セリフテキスト - 1.5倍大きく、左寄せ
+    // セリフテキスト - 80%サイズ、左寄せ
     if (m_text && m_dialogueLine < g_numDialogues) {
         std::wstring displayText(g_bossDialogues[m_dialogueLine], m_dialogueCharIndex);
         m_text->BeginDraw();
-        m_text->DrawText(displayText.c_str(), textStartX, boxY + 35.0f, boxW - portraitSize - 60.0f, 160.0f, 3, 0);  // サイズ3で1.5倍
+        m_text->DrawText(displayText.c_str(), textStartX, boxY + 25.0f, boxW - portraitSize - 60.0f, 180.0f, 3, 0);  // サイズ3
         
         // 次へ進むヒント
         int len = static_cast<int>(wcslen(g_bossDialogues[m_dialogueLine]));

@@ -197,12 +197,12 @@ void BulletManager::SpawnHomingMissile(float x, float y, float vx, float vy) {
 }
 
 void BulletManager::SpawnEnemyBullet(float x, float y, float vx, float vy, BulletType type, XMFLOAT4 color) {
-    float radius = 4.0f;
+    float radius = 8.0f;  // 2倍に
     switch (type) {
-        case BulletType::EnemySmall: radius = 4.0f; break;
-        case BulletType::EnemyMedium: radius = 8.0f; break;
-        case BulletType::EnemyLarge: radius = 12.0f; break;
-        default: radius = 4.0f; break;
+        case BulletType::EnemySmall: radius = 8.0f; break;   // 4→8
+        case BulletType::EnemyMedium: radius = 16.0f; break; // 8→16
+        case BulletType::EnemyLarge: radius = 24.0f; break;  // 12→24
+        default: radius = 8.0f; break;
     }
 
     for (auto& bullet : m_bullets) {

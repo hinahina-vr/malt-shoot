@@ -44,6 +44,7 @@ void Enemy::Initialize(float x, float y, float health, EnemyType type) {
         case EnemyType::Boss: m_radius = 48.0f; break;
         case EnemyType::Bottle: m_radius = 28.0f; break;
         case EnemyType::Glass: m_radius = 20.0f; break;
+        case EnemyType::Fairy: m_radius = 16.0f; break;  // 小さい
         default: m_radius = 24.0f; break;
     }
 }
@@ -100,6 +101,21 @@ void Enemy::Update(float deltaTime, int screenWidth, int screenHeight, BulletMan
                 if (m_frameTimer >= m_frameInterval) {
                     m_frameTimer = 0.0f;
                     m_currentFrame = (m_currentFrame + 1) % 3;
+                }
+            }
+            
+            // Fairy: 横移動（左から来たら右へ、右から来たら左へ）
+            if (m_type == EnemyType::Fairy) {
+                float moveSpeed = 200.0f;
+                // 初期位置で判定（左端から出たなら右へ、右端から出たなら左へ）
+                if (m_targetPosition.x < 320.0f) {
+                    m_position.x += moveSpeed * deltaTime;  // 右へ
+                } else {
+                    m_position.x -= moveSpeed * deltaTime;  // 左へ
+                }
+                // 画面外で消滅
+                if (m_position.x < -50.0f || m_position.x > 690.0f) {
+                    m_state = EnemyState::Leaving;
                 }
             }
             
@@ -227,6 +243,7 @@ void Enemy::Render(Graphics* graphics) {
         case EnemyType::Barrel: glowColor = { 0.6f, 0.4f, 0.2f, 0.5f }; break;
         case EnemyType::Bottle: glowColor = { 0.9f, 0.6f, 0.2f, 0.5f }; break;
         case EnemyType::Glass: glowColor = { 0.4f, 0.7f, 0.9f, 0.5f }; break;
+        case EnemyType::Fairy: glowColor = { 0.8f, 0.5f, 1.0f, 0.4f }; break;  // 紫ピンク
         case EnemyType::Boss: glowColor = { 1.0f, 0.8f, 0.3f, 0.6f }; break;
         default: glowColor = { 0.5f, 0.5f, 0.5f, 0.5f }; break;
     }

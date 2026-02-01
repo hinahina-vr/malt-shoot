@@ -22,6 +22,7 @@ enum class EnemyType {
     Barrel,
     Bottle,
     Glass,
+    Fairy,  // 1発死の雑魚（連隊出現）
     Boss
 };
 

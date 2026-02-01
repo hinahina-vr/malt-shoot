@@ -55,6 +55,10 @@ void EnemyManager::Initialize(Graphics* graphics, BulletManager* bulletManager) 
     if (loader.LoadTexture(basePath + L"enemy_glass.png", &srv)) {
         m_glassTexture.Attach(srv);
     }
+    srv = nullptr;
+    if (loader.LoadTexture(basePath + L"enemy_glass2.png", &srv)) {
+        m_fairyTexture.Attach(srv);
+    }
     
     // 初期ウェーブの生成
     SpawnWave(0);
@@ -119,6 +123,9 @@ void EnemyManager::SpawnEnemy(float x, float y, float health, int patternId, Ene
         case EnemyType::Glass:
             if (m_glassTexture) enemy->SetTexture(m_glassTexture.Get());
             break;
+        case EnemyType::Fairy:
+            if (m_fairyTexture) enemy->SetTexture(m_fairyTexture.Get());
+            break;
         case EnemyType::Boss:
             if (m_bossTexture) enemy->SetTexture(m_bossTexture.Get());
             // 1枚絵を使用（アニメーションなし）
@@ -138,35 +145,41 @@ void EnemyManager::SpawnWave(int waveNumber) {
         m_bossWaveJustStarted = true;
     }
     
-    switch (waveNumber % 4) {
+    switch (waveNumber % 5) {
         case 0:
-            // ウェーブ1: 樽2体（2倍）
-            SpawnEnemy(220.0f, 150.0f, 200.0f, 0, EnemyType::Barrel);
-            SpawnEnemy(420.0f, 150.0f, 200.0f, 0, EnemyType::Barrel);
+            // ウェーブ1: Fairy連隊（左から6体）HP1
+            for (int i = 0; i < 6; i++) {
+                SpawnEnemy(-30.0f, 80.0f + i * 50.0f, 1.0f, 0, EnemyType::Fairy);
+            }
             break;
             
         case 1:
-            // ウェーブ2: ボトル4体（2倍）
-            SpawnEnemy(100.0f, 120.0f, 150.0f, 1, EnemyType::Bottle);
-            SpawnEnemy(220.0f, 120.0f, 150.0f, 1, EnemyType::Bottle);
-            SpawnEnemy(420.0f, 120.0f, 150.0f, 1, EnemyType::Bottle);
-            SpawnEnemy(540.0f, 120.0f, 150.0f, 1, EnemyType::Bottle);
+            // ウェーブ2: Fairy連隊（右から6体）HP1
+            for (int i = 0; i < 6; i++) {
+                SpawnEnemy(670.0f, 80.0f + i * 50.0f, 1.0f, 0, EnemyType::Fairy);
+            }
             break;
             
         case 2:
-            // ウェーブ3: 混合6体（2倍）
-            SpawnEnemy(220.0f, 100.0f, 300.0f, 2, EnemyType::Glass);
-            SpawnEnemy(420.0f, 100.0f, 300.0f, 2, EnemyType::Glass);
-            SpawnEnemy(100.0f, 180.0f, 100.0f, 0, EnemyType::Barrel);
-            SpawnEnemy(260.0f, 180.0f, 100.0f, 0, EnemyType::Barrel);
-            SpawnEnemy(380.0f, 180.0f, 100.0f, 0, EnemyType::Barrel);
-            SpawnEnemy(540.0f, 180.0f, 100.0f, 0, EnemyType::Barrel);
+            // ウェーブ3: 樽2体（中央配置）
+            SpawnEnemy(220.0f, 120.0f, 200.0f, 0, EnemyType::Barrel);
+            SpawnEnemy(420.0f, 120.0f, 200.0f, 0, EnemyType::Barrel);
             break;
             
         case 3:
-            // ウェーブ4: ボス かい
-            // ボスはここではスポーンしない（Game側で3秒ディレイ後にスポーン）
-            m_bossWaveJustStarted = true;
+            // ウェーブ4: ボトル4体（バランス配置）
+            SpawnEnemy(120.0f, 100.0f, 150.0f, 1, EnemyType::Bottle);
+            SpawnEnemy(280.0f, 140.0f, 150.0f, 1, EnemyType::Bottle);
+            SpawnEnemy(360.0f, 140.0f, 150.0f, 1, EnemyType::Bottle);
+            SpawnEnemy(520.0f, 100.0f, 150.0f, 1, EnemyType::Bottle);
+            break;
+            
+        case 4:
+            // ウェーブ5: Fairy両側から12体突撃！
+            for (int i = 0; i < 6; i++) {
+                SpawnEnemy(-30.0f, 60.0f + i * 60.0f, 1.0f, 0, EnemyType::Fairy);
+                SpawnEnemy(670.0f, 90.0f + i * 60.0f, 1.0f, 0, EnemyType::Fairy);
+            }
             break;
     }
 }

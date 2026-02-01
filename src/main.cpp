@@ -1,12 +1,34 @@
 ﻿#include <windows.h>
 #include "Game.h"
 
+static bool g_fullscreen = false;
+
 // ウィンドウプロシージャ
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
     switch (message) {
         case WM_DESTROY:
             PostQuitMessage(0);
             return 0;
+        case WM_SYSKEYDOWN:
+            // ALT+Enterでフルスクリーン切り替え
+            if (wParam == VK_RETURN && (lParam & (1 << 29))) {
+                g_fullscreen = !g_fullscreen;
+                if (g_fullscreen) {
+                    SetWindowLongPtr(hWnd, GWL_STYLE, WS_POPUP | WS_VISIBLE);
+                    SetWindowPos(hWnd, HWND_TOP, 0, 0, 
+                        GetSystemMetrics(SM_CXSCREEN), GetSystemMetrics(SM_CYSCREEN),
+                        SWP_FRAMECHANGED);
+                } else {
+                    SetWindowLongPtr(hWnd, GWL_STYLE, WS_OVERLAPPEDWINDOW | WS_VISIBLE);
+                    RECT rect = { 0, 0, 1920, 1080 };
+                    AdjustWindowRect(&rect, WS_OVERLAPPEDWINDOW, FALSE);
+                    SetWindowPos(hWnd, HWND_TOP, 0, 0, 
+                        rect.right - rect.left, rect.bottom - rect.top,
+                        SWP_FRAMECHANGED);
+                }
+                return 0;
+            }
+            break;
     }
     return DefWindowProc(hWnd, message, wParam, lParam);
 }

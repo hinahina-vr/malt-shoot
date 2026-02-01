@@ -5,15 +5,15 @@
 
 using namespace DirectX;
 
-// Item types like Touhou Eiyashou
+// Whisky-themed item types (モルトバトル)
 enum class ItemType {
-    Power,      // P - Power up item (red)
-    Point,      // Point item (blue)
-    BigPower,   // Big power (large red)
-    Bomb,       // Bomb item (green)
-    Life,       // 1UP (pink)
-    FullPower,  // Full power item (rainbow)
-    Star        // Star item for bonus (yellow)
+    WhiskyShot,   // ショット - Power up (amber)
+    BarrelDrop,   // 樽のしずく - Point item (golden brown)
+    MaltGrain,    // モルト粒 - Big power (deep amber)
+    IceCube,      // 氷 - Bomb item (cyan/ice blue)
+    GoldenBottle, // 金のボトル - 1UP (gold)
+    FullCask,     // フルカスク - Full power (rainbow amber)
+    LabelStar     // ラベルスター - Star bonus (yellow gold)
 };
 
 struct Item {

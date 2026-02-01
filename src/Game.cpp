@@ -387,8 +387,14 @@ void Game::Render() {
         swprintf_s(fpsBuffer, L"FPS: %.1f", m_currentFPS);
         m_text->DrawText(fpsBuffer, textX, 410, 200, 30, 1, m_currentFPS >= 60 ? 0 : 1);
         
+        // ボススペルカード名（プレイエリア上部に表示）
+        if (!m_currentBossSpellName.empty()) {
+            m_text->DrawText(m_currentBossSpellName.c_str(), 20.0f, 18.0f, 
+                static_cast<float>(PLAY_AREA_WIDTH - 100), 30, 1, 1);  // ゴールド文字
+        }
+        
         // Build info
-        m_text->DrawText(L"LoC: 3300+", textX, static_cast<float>(PLAY_AREA_HEIGHT - 60), 200, 20, 0, 2);
+        m_text->DrawText(L"LoC: 3500+", textX, static_cast<float>(PLAY_AREA_HEIGHT - 60), 200, 20, 0, 2);
         m_text->DrawText(L"Hinata vs Kai", textX, static_cast<float>(PLAY_AREA_HEIGHT - 35), 200, 20, 0, 1);
         
         m_text->EndDraw();
@@ -406,23 +412,45 @@ void Game::RenderUI() {
     for (const auto& enemy : m_enemyManager->GetEnemies()) {
         if (enemy->IsBoss() && enemy->IsActive()) {
             float barX = 20.0f;
-            float barY = 20.0f;
+            float barY = 50.0f;  // スペルカード名の下に配置
             float barWidth = PLAY_AREA_WIDTH - 40.0f;
             float barHeight = 16.0f;
             float healthPercent = enemy->GetHealthPercent();
             
+            // ボス残機（★マーク）を右上に表示
+            int remaining = enemy->GetRemainingSpells();
+            for (int i = 0; i < remaining; i++) {
+                float starX = PLAY_AREA_WIDTH - 30.0f - (i * 22.0f);
+                m_graphics->DrawGlowCircle(starX, 28.0f, 8.0f,
+                    DirectX::XMFLOAT4(1.0f, 0.9f, 0.3f, 1.0f), 2);
+            }
+            
+            // スペルカード名を保存（後でD2Dで描画）
+            m_currentBossSpellName = enemy->GetSpellCardName();
+            m_bossRemainingSpells = remaining;
+            
             // 背景
             m_graphics->DrawSprite(barX, barY, barWidth, barHeight,
                 DirectX::XMFLOAT4(0.2f, 0.1f, 0.1f, 0.8f));
-            // 体力バー
-            m_graphics->DrawSprite(barX, barY, barWidth * healthPercent, barHeight,
-                DirectX::XMFLOAT4(0.9f, 0.2f, 0.2f, 1.0f));
+            // 体力バー（スペルごとに色変更）
+            DirectX::XMFLOAT4 hpColor;
+            switch (enemy->GetCurrentSpell()) {
+                case 0: hpColor = { 0.9f, 0.6f, 0.2f, 1.0f }; break;  // 琥珀
+                case 1: hpColor = { 0.8f, 0.3f, 0.8f, 1.0f }; break;  // 紫
+                case 2: hpColor = { 0.3f, 0.8f, 0.9f, 1.0f }; break;  // シアン
+                case 3: hpColor = { 0.9f, 0.2f, 0.2f, 1.0f }; break;  // 赤
+                default: hpColor = { 0.9f, 0.2f, 0.2f, 1.0f }; break;
+            }
+            m_graphics->DrawSprite(barX, barY, barWidth * healthPercent, barHeight, hpColor);
             // 枠
             m_graphics->DrawSprite(barX - 2, barY - 2, barWidth + 4, 2,
                 DirectX::XMFLOAT4(1.0f, 0.9f, 0.3f, 1.0f));
             m_graphics->DrawSprite(barX - 2, barY + barHeight, barWidth + 4, 2,
                 DirectX::XMFLOAT4(1.0f, 0.9f, 0.3f, 1.0f));
             break;
+        } else {
+            m_currentBossSpellName = L"";
+            m_bossRemainingSpells = 0;
         }
     }
 

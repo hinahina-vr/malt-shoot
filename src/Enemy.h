@@ -53,6 +53,21 @@ public:
     int GetSpellCards() const { return m_spellCards; }
     int GetCurrentSpell() const { return m_currentSpell; }
     bool HasSpellsRemaining() const { return m_currentSpell < m_spellCards; }
+    int GetRemainingSpells() const { return m_spellCards - m_currentSpell - 1; }
+    
+    // スペルカード名（ウイスキーテーマ）
+    const wchar_t* GetSpellCardName() const {
+        static const wchar_t* names[] = {
+            L"Amber Sign \"Kohaku no Tsuioku\"",       // 琥珀の追憶
+            L"Aged Sign \"12 Years of Radiance\"",     // 熟成12年の輝き
+            L"Cask Spirit \"Barrel Dance\"",           // 樽の精霊舞踏
+            L"Final Drop \"The Last Dram\""            // 最後の一滴
+        };
+        if (m_currentSpell >= 0 && m_currentSpell < 4) {
+            return names[m_currentSpell];
+        }
+        return L"";
+    }
 
 private:
     void ExecuteBulletPattern(BulletManager* bulletManager, DirectX::XMFLOAT2 playerPos);

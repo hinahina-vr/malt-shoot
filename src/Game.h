@@ -134,4 +134,8 @@ private:
     
     // リプレイシステム
     std::unique_ptr<ReplaySystem> m_replay;
+    
+    // ボススペルカード表示用
+    std::wstring m_currentBossSpellName;
+    int m_bossRemainingSpells = 0;
 };

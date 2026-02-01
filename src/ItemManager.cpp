@@ -77,20 +77,20 @@ void ItemManager::SpawnDrops(float x, float y, int enemyType) {
     for (int i = 0; i < powerCount; i++) {
         float offsetX = static_cast<float>((rand() % 60) - 30);
         float offsetY = static_cast<float>((rand() % 40) - 20);
-        SpawnItem(x + offsetX, y + offsetY, ItemType::Power);
+        SpawnItem(x + offsetX, y + offsetY, ItemType::WhiskyShot);
     }
 
     for (int i = 0; i < pointCount; i++) {
         float offsetX = static_cast<float>((rand() % 80) - 40);
         float offsetY = static_cast<float>((rand() % 50) - 25);
-        SpawnItem(x + offsetX, y + offsetY, ItemType::Point);
+        SpawnItem(x + offsetX, y + offsetY, ItemType::BarrelDrop);
     }
 
     if (rand() % 100 < 5) {
-        SpawnItem(x, y, ItemType::Bomb);
+        SpawnItem(x, y, ItemType::IceCube);
     }
     if (rand() % 100 < 1) {
-        SpawnItem(x, y, ItemType::Life);
+        SpawnItem(x, y, ItemType::GoldenBottle);
     }
 }
 
@@ -143,13 +143,13 @@ ItemManager::CollectedItems ItemManager::CollectItems(XMFLOAT2 playerPos, float 
             item.isActive = false;
 
             switch (item.type) {
-                case ItemType::Power: collected.power += 1; break;
-                case ItemType::BigPower: collected.power += 8; break;
-                case ItemType::Point: collected.points += 100; break;
-                case ItemType::Star: collected.points += 500; break;
-                case ItemType::Bomb: collected.bombs += 1; break;
-                case ItemType::Life: collected.lives += 1; break;
-                case ItemType::FullPower: collected.fullPower = true; break;
+                case ItemType::WhiskyShot: collected.power += 1; break;
+                case ItemType::MaltGrain: collected.power += 8; break;
+                case ItemType::BarrelDrop: collected.points += 100; break;
+                case ItemType::LabelStar: collected.points += 500; break;
+                case ItemType::IceCube: collected.bombs += 1; break;
+                case ItemType::GoldenBottle: collected.lives += 1; break;
+                case ItemType::FullCask: collected.fullPower = true; break;
             }
         }
         else if (dist < collectRadius * 3) {
@@ -163,26 +163,26 @@ ItemManager::CollectedItems ItemManager::CollectItems(XMFLOAT2 playerPos, float 
 
 XMFLOAT4 ItemManager::GetItemColor(ItemType type) {
     switch (type) {
-        case ItemType::Power: return { 1.0f, 0.3f, 0.3f, 1.0f };
-        case ItemType::BigPower: return { 1.0f, 0.1f, 0.1f, 1.0f };
-        case ItemType::Point: return { 0.3f, 0.5f, 1.0f, 1.0f };
-        case ItemType::Star: return { 1.0f, 1.0f, 0.3f, 1.0f };
-        case ItemType::Bomb: return { 0.3f, 1.0f, 0.3f, 1.0f };
-        case ItemType::Life: return { 1.0f, 0.5f, 0.8f, 1.0f };
-        case ItemType::FullPower: return { 1.0f, 0.8f, 0.2f, 1.0f };
+        case ItemType::WhiskyShot: return { 0.9f, 0.6f, 0.2f, 1.0f };   // アンバー
+        case ItemType::MaltGrain: return { 0.7f, 0.4f, 0.1f, 1.0f };    // ディープアンバー
+        case ItemType::BarrelDrop: return { 0.8f, 0.5f, 0.15f, 1.0f };  // ゴールデンブラウン
+        case ItemType::LabelStar: return { 1.0f, 0.9f, 0.4f, 1.0f };    // イエローゴールド
+        case ItemType::IceCube: return { 0.5f, 0.9f, 1.0f, 1.0f };      // アイスブルー
+        case ItemType::GoldenBottle: return { 1.0f, 0.85f, 0.3f, 1.0f };// ゴールド
+        case ItemType::FullCask: return { 0.95f, 0.7f, 0.25f, 1.0f };   // リッチアンバー
         default: return { 1.0f, 1.0f, 1.0f, 1.0f };
     }
 }
 
 float ItemManager::GetItemRadius(ItemType type) {
     switch (type) {
-        case ItemType::Power: return 8.0f;
-        case ItemType::BigPower: return 14.0f;
-        case ItemType::Point: return 6.0f;
-        case ItemType::Star: return 10.0f;
-        case ItemType::Bomb: return 12.0f;
-        case ItemType::Life: return 14.0f;
-        case ItemType::FullPower: return 16.0f;
+        case ItemType::WhiskyShot: return 10.0f;    // ショットグラスサイズ
+        case ItemType::MaltGrain: return 14.0f;     // 大きめ
+        case ItemType::BarrelDrop: return 8.0f;     // 樽のしずく
+        case ItemType::LabelStar: return 12.0f;     // ラベルスター
+        case ItemType::IceCube: return 12.0f;       // 氷
+        case ItemType::GoldenBottle: return 16.0f;  // ボトル（大きい）
+        case ItemType::FullCask: return 18.0f;      // 樽（最大）
         default: return 8.0f;
     }
 }

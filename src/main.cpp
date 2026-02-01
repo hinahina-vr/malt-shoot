@@ -13,6 +13,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
 
 // エントリーポイント
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
+    // COM初期化（WICテクスチャ読み込みに必要、MCIと互換性のあるモード）
+    CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
+    
     // ウィンドウクラスの登録
     WNDCLASSEX wc = {};
     wc.cbSize = sizeof(WNDCLASSEX);

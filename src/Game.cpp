@@ -1,4 +1,4 @@
-#include "Game.h"
+﻿#include "Game.h"
 #include <cmath>
 #include <fstream>
 
@@ -296,6 +296,11 @@ void Game::CheckCollisions() {
                 enemy->TakeDamage(10.0f);
                 bullet.isActive = false;
                 
+                // Hit effect and sound
+                m_particles->SpawnHitEffect(bullet.position.x, bullet.position.y,
+                    DirectX::XMFLOAT4(1.0f, 0.9f, 0.5f, 1.0f));
+                m_sound->PlayEnemyHit();
+                
                 // Combo and score
                 m_combo++;
                 m_comboTimer = 2.0f;
@@ -408,7 +413,7 @@ void Game::Render() {
         }
         
         // Build info
-        m_text->DrawText(L"LoC: 3863", textX, static_cast<float>(PLAY_AREA_HEIGHT - 60), 200, 20, 0, 2);
+        m_text->DrawText(L"LoC: 3920", textX, static_cast<float>(PLAY_AREA_HEIGHT - 60), 200, 20, 0, 2);
         m_text->DrawText(L"Hinata vs Hinahina", textX, static_cast<float>(PLAY_AREA_HEIGHT - 35), 200, 20, 0, 1);
         
         m_text->EndDraw();
@@ -1107,11 +1112,11 @@ void Game::RenderCutin() {
 
 // Boss dialogue (Hinahina)
 static const wchar_t* g_bossDialogues[] = {
-    L"Hinahina: Ara ara, dare ka kita no?",
-    L"Hinahina: Watashi wa Hinahina... Whisky no Yousei yo!",
-    L"Hinahina: Kono Barrel de anata wo yopparawaseru wa!",
-    L"Hinahina: Saa, hajimemashou ka?",
-    L"Hinahina: Ikuyo!"
+    L"ひなひな「あらあら、誰か来たの？」",
+    L"ひなひな「私はひなひな...ウイスキーの妖精よ！」",
+    L"ひなひな「この樽であなたを酔わせちゃうわ！」",
+    L"ひなひな「さあ、始めましょうか？」",
+    L"ひなひな「いくよ！」"
 };
 static const int g_numDialogues = 5;
 
@@ -1162,11 +1167,11 @@ void Game::UpdateBossDialogue() {
 void Game::RenderBossDialogue() {
     if (!m_bossDialogueActive) return;
     
-    // 会話ウィンドウ（画面下部）
+    // 会話ウィンドウ（画面下部）- 大きく
     float boxX = 50.0f;
-    float boxY = PLAY_AREA_HEIGHT - 200.0f;
+    float boxY = PLAY_AREA_HEIGHT - 280.0f;
     float boxW = PLAY_AREA_WIDTH - 100.0f;
-    float boxH = 150.0f;
+    float boxH = 230.0f;
     
     // 半透明背景
     m_graphics->DrawSprite(boxX, boxY, boxW, boxH, 
@@ -1178,11 +1183,11 @@ void Game::RenderBossDialogue() {
     m_graphics->DrawSprite(boxX, boxY + boxH - 3.0f, boxW, 3.0f, 
         DirectX::XMFLOAT4(1.0f, 0.8f, 0.3f, 1.0f));
     
-    // セリフテキスト（タイプライター効果）
+    // セリフテキスト（タイプライター効果）- フォント3倍大きく
     if (m_text && m_dialogueLine < g_numDialogues) {
         std::wstring displayText(g_bossDialogues[m_dialogueLine], m_dialogueCharIndex);
         m_text->BeginDraw();
-        m_text->DrawText(displayText.c_str(), boxX + 20.0f, boxY + 50.0f, boxW - 40.0f, 80.0f, 0, 0);
+        m_text->DrawText(displayText.c_str(), boxX + 30.0f, boxY + 40.0f, boxW - 60.0f, 150.0f, 2, 0);
         
         // 次へ進むヒント
         int len = static_cast<int>(wcslen(g_bossDialogues[m_dialogueLine]));

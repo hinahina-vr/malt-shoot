@@ -190,3 +190,34 @@ void ParticleSystem::SpawnTrail(float x, float y, XMFLOAT4 color) {
     particle->maxLife = particle->life;
     particle->isActive = true;
 }
+
+void ParticleSystem::SpawnHitEffect(float x, float y, XMFLOAT4 color) {
+    int count = 8;
+    for (int i = 0; i < count; i++) {
+        Particle* particle = nullptr;
+        for (auto& p : m_particles) {
+            if (!p.isActive) {
+                particle = &p;
+                break;
+            }
+        }
+        
+        if (!particle && m_particles.size() < static_cast<size_t>(m_maxParticles)) {
+            m_particles.push_back(Particle());
+            particle = &m_particles.back();
+        }
+        
+        if (!particle) continue;
+
+        float angle = (2.0f * PI * i) / count;
+        float speed = 80.0f + (rand() % 60);
+
+        particle->position = { x, y };
+        particle->velocity = { cosf(angle) * speed, sinf(angle) * speed };
+        particle->color = color;
+        particle->size = 3.0f + (rand() % 3);
+        particle->life = 0.25f;
+        particle->maxLife = particle->life;
+        particle->isActive = true;
+    }
+}

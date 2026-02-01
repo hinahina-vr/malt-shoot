@@ -37,6 +37,9 @@ public:
 
     // Sparkle trail
     void SpawnTrail(float x, float y, XMFLOAT4 color);
+    
+    // Hit effect
+    void SpawnHitEffect(float x, float y, XMFLOAT4 color);
 
 private:
     std::vector<Particle> m_particles;
